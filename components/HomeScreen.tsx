@@ -10,7 +10,7 @@ interface HomeScreenProps {
 }
 
 const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigate, user, onEdit }) => {
-  const { totals, targets, meals } = useData();
+  const { totals, targets, meals, getTodayString } = useData();
 
   const caloriesLeft = Math.max(0, targets.calories - totals.calories);
   const progressPercent = Math.min(100, Math.round((totals.calories / targets.calories) * 100));
@@ -24,8 +24,11 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigate, user, onEdit }) => 
   const carbsProgress = Math.min(100, (totals.carbs / targets.carbs) * 100);
   const fatProgress = Math.min(100, (totals.fat / targets.fat) * 100);
 
-  // Get recent meals (first 3)
-  const recentMeals = meals.slice(0, 3);
+  // Get recent meals (first 3 from today)
+  const todayStr = getTodayString();
+  const recentMeals = meals
+    .filter(m => m.date === todayStr)
+    .slice(0, 3);
 
   // Calculate degree for conic gradient (360 * percent / 100)
   const gradientString = `conic-gradient(#9cab8c 0% ${progressPercent}%, #F8DDA4 ${progressPercent}% 100%)`;

@@ -13,6 +13,7 @@ export interface Meal {
   id: string;
   name: string;
   time: string;
+  date: string; // YYYY-MM-DD
   calories: number;
   protein?: number;
   sugar?: number;

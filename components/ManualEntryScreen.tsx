@@ -9,7 +9,7 @@ interface ManualEntryScreenProps {
 }
 
 const ManualEntryScreen: React.FC<ManualEntryScreenProps> = ({ onSave, onCancel, mealToEdit }) => {
-  const { addMeal, updateMeal } = useData();
+  const { addMeal, updateMeal, getTodayString } = useData();
   
   // Initialize state with mealToEdit values if available
   const [name, setName] = useState(mealToEdit?.name || '');
@@ -22,6 +22,7 @@ const ManualEntryScreen: React.FC<ManualEntryScreenProps> = ({ onSave, onCancel,
     // Preserve existing data if editing, especially properties not in this form (like fat/carbs/image)
     const id = mealToEdit ? mealToEdit.id : Date.now().toString();
     const time = mealToEdit ? mealToEdit.time : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const date = mealToEdit ? mealToEdit.date : getTodayString();
     const imageUrl = mealToEdit ? mealToEdit.imageUrl : undefined;
     const fat = mealToEdit?.fat;
     const carbs = mealToEdit?.carbs;
@@ -30,6 +31,7 @@ const ManualEntryScreen: React.FC<ManualEntryScreenProps> = ({ onSave, onCancel,
       id,
       name: name || (mealToEdit ? 'Unnamed Meal' : 'Manual Entry'),
       time,
+      date,
       calories: parseInt(calories) || 0,
       protein: parseInt(protein) || 0,
       sugar: parseInt(sugar) || 0,

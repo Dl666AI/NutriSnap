@@ -16,6 +16,7 @@ interface DataContextType {
   removeMeal: (id: string) => void;
   totals: DailyTotals;
   targets: DailyTotals;
+  getTodayString: () => string;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -28,12 +29,22 @@ const DEFAULT_TARGETS = {
   sugar: 50,
 };
 
+// Helper to get local YYYY-MM-DD
+const getTodayString = () => {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 // Initial demo data
 const DEMO_MEALS: Meal[] = [
   {
     id: '1',
     name: 'Avocado Toast',
     time: '8:30 AM',
+    date: getTodayString(),
     calories: 350,
     protein: 8,
     sugar: 4,
@@ -44,6 +55,7 @@ const DEMO_MEALS: Meal[] = [
     id: '2',
     name: 'Chicken Salad',
     time: '1:15 PM',
+    date: getTodayString(),
     calories: 420,
     protein: 32,
     sugar: 6,
@@ -77,35 +89,37 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setMeals(prev => prev.filter(m => m.id !== id));
   };
 
-  const totals = meals.reduce((acc, meal) => {
-    acc.calories += (meal.calories || 0);
-    
-    // If explicit macros exist, use them. Otherwise estimate for demonstration.
-    if (meal.protein !== undefined) {
-      acc.protein += meal.protein;
-    } else {
-      acc.protein += Math.round(((meal.calories || 0) * 0.25) / 4);
-    }
+  // Calculate totals ONLY for today
+  const todayStr = getTodayString();
+  const totals = meals
+    .filter(meal => meal.date === todayStr)
+    .reduce((acc, meal) => {
+      acc.calories += (meal.calories || 0);
+      
+      if (meal.protein !== undefined) {
+        acc.protein += meal.protein;
+      } else {
+        acc.protein += Math.round(((meal.calories || 0) * 0.25) / 4);
+      }
 
-    if (meal.sugar !== undefined) {
-      acc.sugar += meal.sugar;
-    }
+      if (meal.sugar !== undefined) {
+        acc.sugar += meal.sugar;
+      }
 
-    // Still estimate fat/carbs for general UI if not provided
-    if (meal.fat !== undefined) {
-      acc.fat += meal.fat;
-    } else {
-      acc.fat += Math.round(((meal.calories || 0) * 0.30) / 9);
-    }
+      if (meal.fat !== undefined) {
+        acc.fat += meal.fat;
+      } else {
+        acc.fat += Math.round(((meal.calories || 0) * 0.30) / 9);
+      }
 
-    if (meal.carbs !== undefined) {
-      acc.carbs += meal.carbs;
-    } else {
-      acc.carbs += Math.round(((meal.calories || 0) * 0.45) / 4);
-    }
-    
-    return acc;
-  }, { calories: 0, carbs: 0, protein: 0, fat: 0, sugar: 0 });
+      if (meal.carbs !== undefined) {
+        acc.carbs += meal.carbs;
+      } else {
+        acc.carbs += Math.round(((meal.calories || 0) * 0.45) / 4);
+      }
+      
+      return acc;
+    }, { calories: 0, carbs: 0, protein: 0, fat: 0, sugar: 0 });
 
   return (
     <DataContext.Provider value={{ 
@@ -114,7 +128,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       updateMeal,
       removeMeal, 
       totals, 
-      targets: DEFAULT_TARGETS 
+      targets: DEFAULT_TARGETS,
+      getTodayString
     }}>
       {children}
     </DataContext.Provider>
