@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Screen, Theme, User, GoogleCredentialResponse } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
 import BottomNav from './BottomNav';
+import AuthSimulation from './AuthSimulation';
 
 // ------------------------------------------------------------------
 // CONFIGURATION
@@ -10,8 +11,7 @@ import BottomNav from './BottomNav';
 // Google Cloud Console, setup OAuth Consent Screen, create a Credential 
 // (Client ID), and paste it below.
 // ------------------------------------------------------------------
-const GOOGLE_CLIENT_ID = '19113468273-pbbkm1s0evobrt5m1phtm7n31rjfbq3e.apps.googleusercontent.com'; 
-// Example: '1234567890-abcdefghijklmnopqrstuvwxyz.apps.googleusercontent.com'
+const GOOGLE_CLIENT_ID: string = '19113468273-pbbkm1s0evobrt5m1phtm7n31rjfbq3e.apps.googleusercontent.com'; 
 // ------------------------------------------------------------------
 
 interface ProfileScreenProps {
@@ -32,6 +32,10 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({
   const { theme, setTheme } = useTheme();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
+  const [debugOrigin, setDebugOrigin] = useState<string>('');
+  
+  // Dev Mode State
+  const [showDevAuth, setShowDevAuth] = useState(false);
   
   // Ref for the Google button container
   const googleButtonRef = useRef<HTMLDivElement>(null);
@@ -72,19 +76,26 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
   // Initialize Google Sign-In
   useEffect(() => {
+    // Capture current origin for debugging
+    if (typeof window !== 'undefined') {
+        const origin = window.location.origin;
+        setDebugOrigin(origin);
+    }
+
     // Skip if logged in or if key is missing (handled by UI)
     if (user || GOOGLE_CLIENT_ID === 'PLACEHOLDER') return;
 
     let intervalId: ReturnType<typeof setInterval>;
 
     const initializeGSI = () => {
-        if (window.google && googleButtonRef.current) {
+        if (window.google && window.google.accounts && googleButtonRef.current) {
             try {
                 // Initialize the client
                 window.google.accounts.id.initialize({
                     client_id: GOOGLE_CLIENT_ID,
                     callback: handleGoogleResponse,
-                    auto_select: false
+                    auto_select: false,
+                    // cancel_on_tap_outside: true
                 });
 
                 // Render the button
@@ -99,9 +110,11 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({
                         logo_alignment: 'left'
                     }
                 );
+                // Clear any previous error if rendering succeeded
+                setLoginError(null);
             } catch (err) {
                 console.error("GSI Error:", err);
-                setLoginError("Error initializing Google Sign-In.");
+                setLoginError("Error initializing Google Sign-In. Check console for details.");
             }
             return true;
         }
@@ -173,7 +186,11 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({
                         </p>
                      </div>
                 ) : (
-                    <div ref={googleButtonRef} className="w-full flex justify-center"></div>
+                    <div className="w-full">
+                        <div ref={googleButtonRef} className="w-full flex justify-center min-h-[40px]"></div>
+                        {/* Helper text if button doesn't appear */}
+                        <div className="h-4"></div> 
+                    </div>
                 )}
             </div>
 
@@ -189,8 +206,22 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({
             </button>
             
             {loginError && (
-                <p className="text-xs text-red-500 mt-2 bg-red-50 dark:bg-red-900/10 p-2 rounded-lg">{loginError}</p>
+                <div className="w-full p-3 bg-red-50 dark:bg-red-900/10 rounded-lg text-left">
+                     <p className="text-xs text-red-600 dark:text-red-400 font-bold mb-1">Login Error</p>
+                     <p className="text-xs text-red-500 dark:text-red-300">{loginError}</p>
+                     <p className="text-[10px] text-neutral-400 mt-2 border-t border-red-100 dark:border-red-800/30 pt-1">
+                        Developer Tip: Check that <strong>{debugOrigin}</strong> is added to "Authorized JavaScript origins" in Google Cloud Console.
+                     </p>
+                </div>
             )}
+            
+            {/* Dev Mode Bypass - Only typically needed in preview environments */}
+            <button 
+                onClick={() => setShowDevAuth(true)}
+                className="mt-4 text-xs text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 underline decoration-dotted underline-offset-4"
+            >
+                Testing in Studio? Use Dev Mode
+            </button>
           </div>
 
           <p className="mt-8 text-[11px] text-neutral-400 max-w-[280px]">
@@ -199,6 +230,18 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({
         </main>
 
         {isSettingsOpen && <SettingsSheet theme={theme} setTheme={setTheme} onClose={toggleSettings} onLogout={onLogout} isLoggedIn={false} />}
+        
+        {/* Render the simulation logic when dev mode is active */}
+        {showDevAuth && (
+            <AuthSimulation 
+                provider='google'
+                onSuccess={(u) => {
+                    onLogin(u);
+                    setShowDevAuth(false);
+                }}
+                onCancel={() => setShowDevAuth(false)}
+            />
+        )}
         
         <BottomNav currentScreen="PROFILE" onNavigate={onNavigate} onCameraClick={onFabClick} />
       </div>
