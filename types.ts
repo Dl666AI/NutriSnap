@@ -1,6 +1,8 @@
 
+
 export type Screen = 'SPLASH' | 'HOME' | 'CAMERA' | 'RESULT' | 'PROFILE' | 'DIARY' | 'INSIGHTS' | 'MANUAL_ENTRY' | 'ADD_MENU';
 export type Theme = 'light' | 'dark' | 'system';
+export type Goal = 'LOSS_WEIGHT' | 'GAIN_MUSCLE' | 'GAIN_WEIGHT';
 
 export interface User {
   id: string;
@@ -11,7 +13,13 @@ export interface User {
   height?: number; // cm
   weight?: number; // kg
   age?: number;
+  gender?: 'male' | 'female';
+  goal?: Goal;
+  
+  // Nutrition Targets
   dailyCalories?: number;
+  dailyProtein?: number;
+  dailySugar?: number;
 }
 
 export interface Meal {

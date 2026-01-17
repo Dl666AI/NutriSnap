@@ -58,7 +58,17 @@ const getTodayString = () => {
 // Initial demo data
 const DEMO_MEALS: Meal[] = [];
 
-export const DataProvider: React.FC<{ children: React.ReactNode; userId: string | null; targetCalories?: number }> = ({ children, userId, targetCalories }) => {
+interface DataProviderProps {
+  children: React.ReactNode;
+  userId: string | null;
+  targetCalories?: number;
+  customTargets?: {
+    protein?: number;
+    sugar?: number;
+  };
+}
+
+export const DataProvider: React.FC<DataProviderProps> = ({ children, userId, targetCalories, customTargets }) => {
   // Initialize state by loading from storage based on userId
   const [meals, setMeals] = useState<Meal[]>(() => StorageAdapter.load(userId));
 
@@ -84,13 +94,14 @@ export const DataProvider: React.FC<{ children: React.ReactNode; userId: string 
     const cals = targetCalories || DEFAULT_CALORIES;
     return {
       calories: cals,
+      // Use custom targets if provided, otherwise fallback to standard splits
       // Standard Macro Split: 30% Protein, 45% Carbs, 25% Fat
-      protein: Math.round((cals * 0.30) / 4),
+      protein: customTargets?.protein || Math.round((cals * 0.30) / 4),
       carbs: Math.round((cals * 0.45) / 4),
       fat: Math.round((cals * 0.25) / 9),
-      sugar: 50, // Standard constant recommended limit
+      sugar: customTargets?.sugar || 50, // Standard constant recommended limit
     };
-  }, [targetCalories]);
+  }, [targetCalories, customTargets]);
 
   // Calculate totals ONLY for today
   const todayStr = getTodayString();

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Screen, Theme, User, GoogleCredentialResponse } from '../types';
+import { Screen, Theme, User, GoogleCredentialResponse, Goal } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
 import BottomNav from './BottomNav';
 import AuthSimulation from './AuthSimulation';
@@ -88,7 +88,9 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({
           dailyCalories: 2000,
           weight: 70,
           height: 175,
-          age: 25
+          age: 25,
+          gender: 'male',
+          goal: 'LOSS_WEIGHT'
       };
       onLogin(guestUser);
   };
@@ -355,19 +357,40 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
           <div 
             onClick={toggleEditProfile}
-            className="col-span-2 bg-accent/20 dark:bg-accent/10 p-5 rounded-3xl shadow-sm border border-accent/30 flex items-center justify-between active:scale-[0.99] transition-transform cursor-pointer"
+            className="col-span-2 bg-accent/20 dark:bg-accent/10 p-5 rounded-3xl shadow-sm border border-accent/30 flex flex-col gap-3 active:scale-[0.99] transition-transform cursor-pointer"
           >
-            <div className="flex flex-col gap-1">
-              <div className="flex items-center gap-2 text-neutral-700 dark:text-neutral-300 mb-1">
-                <span className="material-symbols-outlined text-lg filled">local_fire_department</span>
-                <span className="text-sm font-bold">Daily Target</span>
-              </div>
-              <div className="text-2xl font-extrabold text-neutral-900 dark:text-white">
-                {user.dailyCalories ? user.dailyCalories : '2000'} <span className="text-base font-semibold text-neutral-600 dark:text-neutral-400">kcal</span>
-              </div>
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-neutral-700 dark:text-neutral-300">
+                    <span className="material-symbols-outlined text-lg filled">local_fire_department</span>
+                    <span className="text-sm font-bold">Daily Targets</span>
+                </div>
+                <div className="size-8 rounded-full bg-accent/30 flex items-center justify-center">
+                    <span className="material-symbols-outlined text-accent-cream dark:text-accent text-sm">flag</span>
+                </div>
             </div>
-            <div className="size-12 rounded-full bg-accent/30 flex items-center justify-center">
-                 <span className="material-symbols-outlined text-accent-cream dark:text-accent">flag</span>
+            
+            <div className="flex justify-between items-end">
+                <div className="flex flex-col">
+                    <span className="text-xs font-semibold text-neutral-500 mb-0.5">Calories</span>
+                    <div className="text-xl font-extrabold text-neutral-900 dark:text-white">
+                        {user.dailyCalories ? user.dailyCalories : '2000'} <span className="text-sm font-semibold text-neutral-600 dark:text-neutral-400">kcal</span>
+                    </div>
+                </div>
+                
+                <div className="flex gap-4">
+                    <div className="flex flex-col items-end">
+                        <span className="text-xs font-semibold text-neutral-500 mb-0.5">Protein</span>
+                        <div className="text-lg font-bold text-neutral-800 dark:text-white">
+                            {user.dailyProtein || Math.round((user.dailyCalories || 2000) * 0.30 / 4)}g
+                        </div>
+                    </div>
+                    <div className="flex flex-col items-end">
+                        <span className="text-xs font-semibold text-neutral-500 mb-0.5">Sugar (Max)</span>
+                        <div className="text-lg font-bold text-neutral-800 dark:text-white">
+                            {user.dailySugar || 50}g
+                        </div>
+                    </div>
+                </div>
             </div>
           </div>
         </div>
@@ -490,7 +513,85 @@ const SettingsSheet: React.FC<SettingsSheetProps> = ({ theme, setTheme, onClose,
   </div>
 );
 
-// Edit Profile Component
+// ------------------------------------------------------------------
+// CALCULATOR FORMULAS
+// ------------------------------------------------------------------
+
+interface UserInput {
+  age: number;        // Years
+  gender: 'male' | 'female';
+  height: number;     // Centimeters
+  weight: number;     // Kilograms
+}
+
+interface NutritionalOutput {
+  dailyCalories: number; // kcal
+  dailyProtein: number;  // grams
+  maxDailySugar: number; // grams (Based on <10% total calories)
+}
+
+function calculateBMR(input: UserInput): number {
+  const { age, gender, height, weight } = input;
+  
+  // Base calculation
+  let bmr = (10 * weight) + (6.25 * height) - (5 * age);
+
+  // Gender adjustment
+  if (gender === 'male') {
+    bmr += 5;
+  } else {
+    bmr -= 161;
+  }
+
+  return bmr;
+}
+
+export function calculateForWeightLoss(input: UserInput): NutritionalOutput {
+  const bmr = calculateBMR(input);
+  const sedentaryTDEE = bmr * 1.2;
+  const targetCalories = Math.round(sedentaryTDEE - 500);
+  const targetProtein = Math.round(input.weight * 2.2);
+  const maxSugar = Math.round((targetCalories * 0.10) / 4);
+
+  return {
+    dailyCalories: Math.max(1200, targetCalories),
+    dailyProtein: targetProtein,
+    maxDailySugar: maxSugar,
+  };
+}
+
+export function calculateForMuscleGain(input: UserInput): NutritionalOutput {
+  const bmr = calculateBMR(input);
+  const sedentaryTDEE = bmr * 1.2;
+  const targetCalories = Math.round(sedentaryTDEE + 250);
+  const targetProtein = Math.round(input.weight * 2.0);
+  const maxSugar = Math.round((targetCalories * 0.10) / 4);
+
+  return {
+    dailyCalories: targetCalories,
+    dailyProtein: targetProtein,
+    maxDailySugar: maxSugar,
+  };
+}
+
+export function calculateForWeightGain(input: UserInput): NutritionalOutput {
+  const bmr = calculateBMR(input);
+  const sedentaryTDEE = bmr * 1.2;
+  const targetCalories = Math.round(sedentaryTDEE + 500);
+  const targetProtein = Math.round(input.weight * 1.8);
+  const maxSugar = Math.round((targetCalories * 0.10) / 4);
+
+  return {
+    dailyCalories: targetCalories,
+    dailyProtein: targetProtein,
+    maxDailySugar: maxSugar,
+  };
+}
+
+// ------------------------------------------------------------------
+// EDIT PROFILE COMPONENT
+// ------------------------------------------------------------------
+
 interface EditProfileSheetProps {
     user: User;
     onClose: () => void;
@@ -501,7 +602,48 @@ const EditProfileSheet: React.FC<EditProfileSheetProps> = ({ user, onClose, onSa
     const [weight, setWeight] = useState(user.weight?.toString() || '');
     const [height, setHeight] = useState(user.height?.toString() || '');
     const [age, setAge] = useState(user.age?.toString() || '');
+    
+    // New Fields
+    const [gender, setGender] = useState<'male'|'female'>(user.gender || 'male');
+    const [goal, setGoal] = useState<Goal>(user.goal || 'LOSS_WEIGHT');
+    
+    // Target fields (can be auto-calculated)
     const [calories, setCalories] = useState(user.dailyCalories?.toString() || '2000');
+    const [protein, setProtein] = useState(user.dailyProtein?.toString() || '');
+    const [sugar, setSugar] = useState(user.dailySugar?.toString() || '50');
+
+    const handleCalculate = () => {
+        if (!weight || !height || !age) return;
+        
+        const input: UserInput = {
+            age: parseInt(age),
+            height: parseFloat(height),
+            weight: parseFloat(weight),
+            gender: gender
+        };
+
+        let result: NutritionalOutput;
+
+        if (goal === 'LOSS_WEIGHT') {
+            result = calculateForWeightLoss(input);
+        } else if (goal === 'GAIN_MUSCLE') {
+            result = calculateForMuscleGain(input);
+        } else if (goal === 'GAIN_WEIGHT') {
+            result = calculateForWeightGain(input);
+        } else {
+             // Maintenance/Fallback: Just use BMR * 1.2
+             const bmr = calculateBMR(input);
+             result = {
+                 dailyCalories: Math.round(bmr * 1.2),
+                 dailyProtein: Math.round(parseFloat(weight) * 1.0),
+                 maxDailySugar: 50
+             }
+        }
+
+        setCalories(result.dailyCalories.toString());
+        setProtein(result.dailyProtein.toString());
+        setSugar(result.maxDailySugar.toString());
+    };
 
     const handleSave = () => {
         onSave({
@@ -509,14 +651,18 @@ const EditProfileSheet: React.FC<EditProfileSheetProps> = ({ user, onClose, onSa
             weight: weight ? parseFloat(weight) : undefined,
             height: height ? parseFloat(height) : undefined,
             age: age ? parseInt(age) : undefined,
-            dailyCalories: calories ? parseInt(calories) : 2000
+            gender: gender,
+            goal: goal,
+            dailyCalories: calories ? parseInt(calories) : 2000,
+            dailyProtein: protein ? parseInt(protein) : undefined,
+            dailySugar: sugar ? parseInt(sugar) : 50,
         });
     };
 
     return (
         <div className="fixed inset-0 z-[100] flex flex-col justify-end">
             <div className="absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity" onClick={onClose}></div>
-            <div className="relative bg-white dark:bg-background-dark rounded-t-3xl p-6 shadow-2xl animate-enter border-t border-neutral-100 dark:border-neutral-800 max-w-md mx-auto w-full">
+            <div className="relative bg-white dark:bg-background-dark rounded-t-3xl p-6 shadow-2xl animate-enter border-t border-neutral-100 dark:border-neutral-800 max-w-md mx-auto w-full max-h-[90vh] overflow-y-auto">
                 <div className="flex items-center justify-between mb-6">
                     <h2 className="text-xl font-bold text-neutral-900 dark:text-white">Edit Profile</h2>
                     <button onClick={onClose} className="p-2 -mr-2 text-neutral-500">
@@ -524,7 +670,58 @@ const EditProfileSheet: React.FC<EditProfileSheetProps> = ({ user, onClose, onSa
                     </button>
                 </div>
 
-                <div className="space-y-5">
+                <div className="space-y-6">
+                    {/* Top Section: Goal & Gender */}
+                    <div className="space-y-4 p-4 bg-surface-light dark:bg-surface-dark rounded-2xl">
+                         {/* Gender Switch */}
+                         <div className="flex bg-white dark:bg-neutral-800 p-1 rounded-xl shadow-sm">
+                            <button 
+                                onClick={() => setGender('male')}
+                                className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${gender === 'male' ? 'bg-primary text-white shadow-sm' : 'text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200'}`}
+                            >
+                                Male
+                            </button>
+                            <button 
+                                onClick={() => setGender('female')}
+                                className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${gender === 'female' ? 'bg-primary text-white shadow-sm' : 'text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200'}`}
+                            >
+                                Female
+                            </button>
+                         </div>
+
+                         {/* Goal Selector */}
+                         <div className="space-y-2">
+                            <label className="text-xs font-bold uppercase tracking-wider text-neutral-400 ml-1">Current Goal</label>
+                            <div className="grid grid-cols-1 gap-2">
+                                <button 
+                                    onClick={() => setGoal('LOSS_WEIGHT')}
+                                    className={`px-4 py-3 rounded-xl border text-left flex items-center gap-3 transition-all ${goal === 'LOSS_WEIGHT' ? 'border-primary bg-primary/5 text-primary-dark dark:text-primary' : 'border-transparent bg-white dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300'}`}
+                                >
+                                    <span className="material-symbols-outlined">trending_down</span>
+                                    <span className="font-bold text-sm">Lose Weight</span>
+                                    {goal === 'LOSS_WEIGHT' && <span className="material-symbols-outlined ml-auto text-primary">check</span>}
+                                </button>
+                                <button 
+                                    onClick={() => setGoal('GAIN_MUSCLE')}
+                                    className={`px-4 py-3 rounded-xl border text-left flex items-center gap-3 transition-all ${goal === 'GAIN_MUSCLE' ? 'border-primary bg-primary/5 text-primary-dark dark:text-primary' : 'border-transparent bg-white dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300'}`}
+                                >
+                                    <span className="material-symbols-outlined">fitness_center</span>
+                                    <span className="font-bold text-sm">Build Muscle</span>
+                                    {goal === 'GAIN_MUSCLE' && <span className="material-symbols-outlined ml-auto text-primary">check</span>}
+                                </button>
+                                <button 
+                                    onClick={() => setGoal('GAIN_WEIGHT')}
+                                    className={`px-4 py-3 rounded-xl border text-left flex items-center gap-3 transition-all ${goal === 'GAIN_WEIGHT' ? 'border-primary bg-primary/5 text-primary-dark dark:text-primary' : 'border-transparent bg-white dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300'}`}
+                                >
+                                    <span className="material-symbols-outlined">trending_up</span>
+                                    <span className="font-bold text-sm">Gain Weight</span>
+                                    {goal === 'GAIN_WEIGHT' && <span className="material-symbols-outlined ml-auto text-primary">check</span>}
+                                </button>
+                            </div>
+                         </div>
+                    </div>
+
+                    {/* Stats Input */}
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                             <label className="text-xs font-bold uppercase tracking-wider text-neutral-400 ml-1">Weight (kg)</label>
@@ -532,7 +729,7 @@ const EditProfileSheet: React.FC<EditProfileSheetProps> = ({ user, onClose, onSa
                                 type="number" 
                                 value={weight}
                                 onChange={e => setWeight(e.target.value)}
-                                placeholder="e.g. 70"
+                                placeholder="0"
                                 className="w-full h-12 px-4 rounded-xl bg-surface-light dark:bg-surface-dark border-none focus:ring-2 focus:ring-primary/50 text-neutral-800 dark:text-white font-semibold"
                             />
                         </div>
@@ -542,39 +739,69 @@ const EditProfileSheet: React.FC<EditProfileSheetProps> = ({ user, onClose, onSa
                                 type="number" 
                                 value={height}
                                 onChange={e => setHeight(e.target.value)}
-                                placeholder="e.g. 175"
+                                placeholder="0"
                                 className="w-full h-12 px-4 rounded-xl bg-surface-light dark:bg-surface-dark border-none focus:ring-2 focus:ring-primary/50 text-neutral-800 dark:text-white font-semibold"
                             />
                         </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <label className="text-xs font-bold uppercase tracking-wider text-neutral-400 ml-1">Age</label>
+                        <div className="space-y-2 col-span-2">
+                            <label className="text-xs font-bold uppercase tracking-wider text-neutral-400 ml-1">Age (Years)</label>
                             <input 
                                 type="number" 
                                 value={age}
                                 onChange={e => setAge(e.target.value)}
-                                placeholder="e.g. 25"
-                                className="w-full h-12 px-4 rounded-xl bg-surface-light dark:bg-surface-dark border-none focus:ring-2 focus:ring-primary/50 text-neutral-800 dark:text-white font-semibold"
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-xs font-bold uppercase tracking-wider text-neutral-400 ml-1">Calorie Target</label>
-                            <input 
-                                type="number" 
-                                value={calories}
-                                onChange={e => setCalories(e.target.value)}
-                                placeholder="e.g. 2000"
+                                placeholder="0"
                                 className="w-full h-12 px-4 rounded-xl bg-surface-light dark:bg-surface-dark border-none focus:ring-2 focus:ring-primary/50 text-neutral-800 dark:text-white font-semibold"
                             />
                         </div>
                     </div>
 
-                    <div className="p-4 bg-accent/10 rounded-xl border border-accent/20">
-                        <p className="text-xs text-neutral-600 dark:text-neutral-400 leading-relaxed">
-                            <span className="font-bold text-neutral-800 dark:text-neutral-200">Note:</span> Updating your calorie target will automatically recalculate your macro goals for Protein, Carbs, and Fat based on a standard balanced diet.
-                        </p>
+                    {/* Auto-Calculate Button */}
+                    <button 
+                        onClick={handleCalculate}
+                        disabled={!weight || !height || !age}
+                        className="w-full py-3 rounded-xl border-2 border-dashed border-primary/30 text-primary font-bold hover:bg-primary/5 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                    >
+                        <span className="material-symbols-outlined">calculate</span>
+                        Recalculate Nutrition Targets
+                    </button>
+
+                    {/* Results Section */}
+                    <div className="space-y-4">
+                        <div className="flex items-center gap-2 mb-2">
+                            <span className="text-sm font-bold text-neutral-900 dark:text-white">Daily Targets</span>
+                            <div className="h-px bg-neutral-200 dark:bg-neutral-700 flex-1"></div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold uppercase tracking-wider text-neutral-400 ml-1">Calories</label>
+                            <input 
+                                type="number" 
+                                value={calories}
+                                onChange={e => setCalories(e.target.value)}
+                                className="w-full h-12 px-4 rounded-xl bg-surface-light dark:bg-surface-dark border-none focus:ring-2 focus:ring-primary/50 text-neutral-800 dark:text-white font-semibold"
+                            />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold uppercase tracking-wider text-neutral-400 ml-1">Protein (g)</label>
+                                <input 
+                                    type="number" 
+                                    value={protein}
+                                    onChange={e => setProtein(e.target.value)}
+                                    className="w-full h-12 px-4 rounded-xl bg-surface-light dark:bg-surface-dark border-none focus:ring-2 focus:ring-primary/50 text-neutral-800 dark:text-white font-semibold"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold uppercase tracking-wider text-neutral-400 ml-1">Max Sugar (g)</label>
+                                <input 
+                                    type="number" 
+                                    value={sugar}
+                                    onChange={e => setSugar(e.target.value)}
+                                    className="w-full h-12 px-4 rounded-xl bg-surface-light dark:bg-surface-dark border-none focus:ring-2 focus:ring-primary/50 text-neutral-800 dark:text-white font-semibold"
+                                />
+                            </div>
+                        </div>
                     </div>
 
                     <div className="pt-2">

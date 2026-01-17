@@ -224,6 +224,10 @@ const App: React.FC = () => {
       <DataProvider 
         userId={user?.id || null} 
         targetCalories={user?.dailyCalories} 
+        customTargets={{
+          protein: user?.dailyProtein,
+          sugar: user?.dailySugar
+        }}
         key={user?.id || 'guest'}
       >
         <AppContent 
