@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Screen, User, Meal } from './types';
 import { ThemeProvider } from './contexts/ThemeContext';
-import { DataProvider } from './contexts/DataContext';
+import { DataProvider, useData } from './contexts/DataContext';
 import SplashScreen from './components/SplashScreen';
 import HomeScreen from './components/HomeScreen';
 import CameraScreen from './components/CameraScreen';
@@ -12,10 +12,14 @@ import InsightsScreen from './components/InsightsScreen';
 import ManualEntryScreen from './components/ManualEntryScreen';
 
 const AppContent: React.FC = () => {
+  const { getTodayString } = useData();
   const [currentScreen, setCurrentScreen] = useState<Screen>('SPLASH');
   const [previousTab, setPreviousTab] = useState<Screen>('HOME');
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [editingMeal, setEditingMeal] = useState<Meal | null>(null);
+  
+  // Track which date we are adding a meal for
+  const [targetDate, setTargetDate] = useState<string>(getTodayString());
   
   // Persistent User State
   const [user, setUser] = useState<User | null>(() => {
@@ -49,11 +53,23 @@ const AppContent: React.FC = () => {
 
   // Wrapper for navigation to track "tab" screens vs "flow" screens
   const navigateTo = (screen: Screen) => {
+    // If standard navigation to camera (e.g. from Home FAB), default to Today
+    if (screen === 'CAMERA') {
+        setTargetDate(getTodayString());
+    }
+
     // If navigating to a main tab, remember it
     if (['HOME', 'DIARY', 'INSIGHTS', 'PROFILE'].includes(screen)) {
       setPreviousTab(screen);
     }
     setCurrentScreen(screen);
+  };
+
+  // Specific handler for adding from Diary (preserves selected date)
+  const handleAddMealFromDiary = (date: string) => {
+      setTargetDate(date);
+      setCurrentScreen('CAMERA');
+      setPreviousTab('DIARY');
   };
 
   const handleCapture = (imageSrc?: string) => {
@@ -80,7 +96,7 @@ const AppContent: React.FC = () => {
       case 'HOME':
         return <HomeScreen onNavigate={navigateTo} user={user} onEdit={handleEditMeal} />;
       case 'DIARY':
-        return <DiaryScreen onNavigate={navigateTo} onEdit={handleEditMeal} />;
+        return <DiaryScreen onNavigate={navigateTo} onEdit={handleEditMeal} onAddMeal={handleAddMealFromDiary} />;
       case 'INSIGHTS':
         return <InsightsScreen onNavigate={navigateTo} />;
       case 'CAMERA':
@@ -89,12 +105,13 @@ const AppContent: React.FC = () => {
         return (
             <ManualEntryScreen 
                 mealToEdit={editingMeal}
+                targetDate={targetDate}
                 onSave={() => { setEditingMeal(null); setCurrentScreen(previousTab); }} 
                 onCancel={() => { setEditingMeal(null); setCurrentScreen(previousTab); }} 
             />
         );
       case 'RESULT':
-        return <ResultScreen image={capturedImage} onSave={() => setCurrentScreen(previousTab)} onRetake={() => setCurrentScreen('CAMERA')} />;
+        return <ResultScreen image={capturedImage} targetDate={targetDate} onSave={() => setCurrentScreen(previousTab)} onRetake={() => setCurrentScreen('CAMERA')} />;
       case 'PROFILE':
         return (
           <ProfileScreen 

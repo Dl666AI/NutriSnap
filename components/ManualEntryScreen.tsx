@@ -6,9 +6,10 @@ interface ManualEntryScreenProps {
   onSave: () => void;
   onCancel: () => void;
   mealToEdit?: Meal | null;
+  targetDate?: string;
 }
 
-const ManualEntryScreen: React.FC<ManualEntryScreenProps> = ({ onSave, onCancel, mealToEdit }) => {
+const ManualEntryScreen: React.FC<ManualEntryScreenProps> = ({ onSave, onCancel, mealToEdit, targetDate }) => {
   const { addMeal, updateMeal, getTodayString } = useData();
   
   // Initialize state with mealToEdit values if available
@@ -22,7 +23,10 @@ const ManualEntryScreen: React.FC<ManualEntryScreenProps> = ({ onSave, onCancel,
     // Preserve existing data if editing, especially properties not in this form (like fat/carbs/image)
     const id = mealToEdit ? mealToEdit.id : Date.now().toString();
     const time = mealToEdit ? mealToEdit.time : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const date = mealToEdit ? mealToEdit.date : getTodayString();
+    
+    // If editing, use meal date. If new, use targetDate (if provided from Diary), otherwise Today
+    const date = mealToEdit ? mealToEdit.date : (targetDate || getTodayString());
+    
     const imageUrl = mealToEdit ? mealToEdit.imageUrl : undefined;
     const fat = mealToEdit?.fat;
     const carbs = mealToEdit?.carbs;

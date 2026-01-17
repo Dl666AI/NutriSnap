@@ -6,6 +6,7 @@ interface ResultScreenProps {
   image?: string | null;
   onSave: () => void;
   onRetake: () => void;
+  targetDate?: string;
 }
 
 interface FoodAnalysis {
@@ -18,7 +19,7 @@ interface FoodAnalysis {
   confidence: number;
 }
 
-const ResultScreen: React.FC<ResultScreenProps> = ({ image, onSave, onRetake }) => {
+const ResultScreen: React.FC<ResultScreenProps> = ({ image, onSave, onRetake, targetDate }) => {
   const { addMeal, getTodayString } = useData();
   const [analysis, setAnalysis] = useState<FoodAnalysis | null>(null);
   const [loading, setLoading] = useState(true);
@@ -48,7 +49,7 @@ const ResultScreen: React.FC<ResultScreenProps> = ({ image, onSave, onRetake }) 
       id: Date.now().toString(),
       name: analysis.name,
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      date: getTodayString(),
+      date: targetDate || getTodayString(),
       calories: analysis.calories,
       protein: analysis.protein,
       carbs: analysis.carbs,

@@ -6,9 +6,10 @@ import BottomNav from './BottomNav';
 interface DiaryScreenProps {
   onNavigate: (screen: Screen) => void;
   onEdit: (meal: Meal) => void;
+  onAddMeal: (date: string) => void;
 }
 
-const DiaryScreen: React.FC<DiaryScreenProps> = ({ onNavigate, onEdit }) => {
+const DiaryScreen: React.FC<DiaryScreenProps> = ({ onNavigate, onEdit, onAddMeal }) => {
   const { meals, targets, removeMeal, getTodayString } = useData();
   
   // State for current selected date (Data View)
@@ -127,11 +128,9 @@ const DiaryScreen: React.FC<DiaryScreenProps> = ({ onNavigate, onEdit }) => {
                {title}
                <span className="text-xs font-normal text-neutral-400 bg-neutral-100 dark:bg-neutral-800 px-2 py-0.5 rounded-md">0 kcal</span>
              </h3>
-             {isToday && (
-                <button onClick={() => onNavigate('CAMERA')} className="text-primary hover:bg-primary/10 p-1 rounded-full transition-colors">
-                    <span className="material-symbols-outlined">add</span>
-                </button>
-             )}
+             <button onClick={() => onAddMeal(selectedDateStr)} className="text-primary hover:bg-primary/10 p-1 rounded-full transition-colors">
+                <span className="material-symbols-outlined">add</span>
+             </button>
           </div>
           <div className="border-2 border-dashed border-neutral-200 dark:border-neutral-700 rounded-xl p-4 flex flex-col items-center justify-center text-center">
             <p className="text-xs text-neutral-400">No {title.toLowerCase()} logged</p>
@@ -147,11 +146,9 @@ const DiaryScreen: React.FC<DiaryScreenProps> = ({ onNavigate, onEdit }) => {
              {title}
              <span className="text-xs font-normal text-neutral-400 bg-neutral-100 dark:bg-neutral-800 px-2 py-0.5 rounded-md">{sectionCals} kcal</span>
            </h3>
-           {isToday && (
-             <button onClick={() => onNavigate('CAMERA')} className="text-primary hover:bg-primary/10 p-1 rounded-full transition-colors">
-               <span className="material-symbols-outlined">add</span>
-             </button>
-           )}
+           <button onClick={() => onAddMeal(selectedDateStr)} className="text-primary hover:bg-primary/10 p-1 rounded-full transition-colors">
+             <span className="material-symbols-outlined">add</span>
+           </button>
         </div>
         <div className="flex flex-col gap-3">
           {sectionMeals.map(meal => (
@@ -334,7 +331,7 @@ const DiaryScreen: React.FC<DiaryScreenProps> = ({ onNavigate, onEdit }) => {
       <BottomNav 
         currentScreen="DIARY" 
         onNavigate={onNavigate} 
-        onCameraClick={() => onNavigate('CAMERA')} 
+        onCameraClick={() => onAddMeal(selectedDateStr)} 
       />
     </div>
   );
