@@ -73,3 +73,52 @@ export async function analyzeFoodImage(base64Image: string): Promise<FoodAnalysi
     throw error;
   }
 }
+
+export async function analyzeFoodText(description: string): Promise<FoodAnalysisResult> {
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview', // Latest, fast model suitable for text analysis
+      contents: {
+        parts: [
+          {
+            text: `Analyze this food description: "${description}". 
+                   Identify the most likely food item(s) and estimate nutritional content.
+                   Return specific numbers for calories, protein, carbs, fat, and sugar based on standard serving sizes.
+                   Be realistic. If the text is gibberish or not food, return low confidence.`
+          }
+        ]
+      },
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            name: { 
+              type: Type.STRING,
+              description: "A short, concise name for the meal described."
+            },
+            calories: { type: Type.NUMBER },
+            protein: { type: Type.NUMBER, description: "Protein in grams" },
+            carbs: { type: Type.NUMBER, description: "Carbohydrates in grams" },
+            fat: { type: Type.NUMBER, description: "Fat in grams" },
+            sugar: { type: Type.NUMBER, description: "Sugar in grams" },
+            confidence: { 
+              type: Type.NUMBER, 
+              description: "A score from 0 to 100." 
+            }
+          },
+          required: ["name", "calories", "protein", "carbs", "fat", "sugar", "confidence"]
+        }
+      }
+    });
+
+    if (response.text) {
+      return JSON.parse(response.text) as FoodAnalysisResult;
+    } else {
+      throw new Error("No data returned from AI model");
+    }
+  } catch (error) {
+    console.error("Gemini Text Analysis Failed:", error);
+    throw error;
+  }
+}

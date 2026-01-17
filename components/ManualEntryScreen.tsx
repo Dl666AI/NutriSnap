@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useData } from '../contexts/DataContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { Meal } from '../types';
+import { analyzeFoodText } from '../services/GeminiService';
 
 interface ManualEntryScreenProps {
   onSave: () => void;
@@ -20,6 +21,11 @@ const ManualEntryScreen: React.FC<ManualEntryScreenProps> = ({ onSave, onCancel,
   const [protein, setProtein] = useState(mealToEdit?.protein?.toString() || '');
   const [sugar, setSugar] = useState(mealToEdit?.sugar?.toString() || '');
   const [mealType, setMealType] = useState<Meal['type']>(mealToEdit?.type || 'Snack');
+
+  // AI Autofill State
+  const [description, setDescription] = useState('');
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
 
   const handleSave = () => {
     // Preserve existing data if editing, especially properties not in this form (like fat/carbs/image)
@@ -53,6 +59,33 @@ const ManualEntryScreen: React.FC<ManualEntryScreenProps> = ({ onSave, onCancel,
       addMeal(mealData);
     }
     onSave();
+  };
+
+  const handleAutofill = async () => {
+    if (!description.trim()) return;
+    
+    setIsGenerating(true);
+    setAiError(null);
+
+    try {
+      const result = await analyzeFoodText(description);
+      
+      if (result.confidence > 50) {
+        setName(result.name);
+        setCalories(result.calories.toString());
+        setProtein(result.protein.toString());
+        setSugar(result.sugar.toString());
+        // Note: fat and carbs are returned by API but not currently exposed in this specific form UI
+        // In a real app, we would likely add fields for them or store them in hidden state to save
+      } else {
+        setAiError(t('ai_error'));
+      }
+    } catch (err) {
+      console.error(err);
+      setAiError(t('ai_error'));
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const typeOptions: Meal['type'][] = ['Breakfast', 'Lunch', 'Dinner', 'Snack'];
@@ -93,6 +126,47 @@ const ManualEntryScreen: React.FC<ManualEntryScreenProps> = ({ onSave, onCancel,
               </button>
             ))}
           </div>
+
+          {/* AI Description Section (Only show if not editing existing) */}
+          {!mealToEdit && (
+            <div className="bg-surface-light dark:bg-surface-dark p-4 rounded-2xl border border-transparent focus-within:border-primary/30 focus-within:bg-white dark:focus-within:bg-neutral-800 transition-all shadow-sm">
+                <div className="flex justify-between items-center mb-2">
+                    <label className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-1">
+                        <span className="material-symbols-outlined text-sm">auto_awesome</span>
+                        {t('describe_meal')}
+                    </label>
+                </div>
+                <textarea 
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder={t('describe_hint')}
+                    className="w-full bg-transparent border-none p-0 text-sm min-h-[60px] resize-none focus:ring-0 text-neutral-800 dark:text-white placeholder-neutral-400"
+                />
+                <div className="flex justify-between items-center mt-2">
+                    {aiError && <span className="text-xs text-red-500 font-medium">{aiError}</span>}
+                    <div className="flex-1"></div>
+                    <button 
+                        onClick={handleAutofill}
+                        disabled={!description || isGenerating}
+                        className="bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 disabled:opacity-50 hover:opacity-90 transition-opacity"
+                    >
+                        {isGenerating ? (
+                             <>
+                                <div className="size-3 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+                                {t('generating')}
+                             </>
+                        ) : (
+                             <>
+                                <span className="material-symbols-outlined text-sm">bolt</span>
+                                {t('autofill_btn')}
+                             </>
+                        )}
+                    </button>
+                </div>
+            </div>
+          )}
+
+          <div className="h-px bg-neutral-100 dark:bg-neutral-800 w-full"></div>
 
           {/* Name Input */}
           <div className="space-y-2">

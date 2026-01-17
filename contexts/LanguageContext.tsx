@@ -98,7 +98,12 @@ export const translations = {
     privacy: "Privacy Policy",
     agree: "By continuing, you agree to NutriSnap's",
     and: "and",
-    start_camera: "Start Camera"
+    start_camera: "Start Camera",
+    describe_meal: "Describe your meal",
+    describe_hint: "e.g. 2 slices of pepperoni pizza and a coke",
+    autofill_btn: "Auto-fill with AI",
+    generating: "Generating...",
+    ai_error: "Could not estimate. Please try again."
   },
   zh: {
     app_name: "NutriSnap",
@@ -195,7 +200,12 @@ export const translations = {
     privacy: "隐私政策",
     agree: "继续即表示您同意 NutriSnap 的",
     and: "和",
-    start_camera: "启动相机"
+    start_camera: "启动相机",
+    describe_meal: "描述你的食物",
+    describe_hint: "例如：两片意大利香肠披萨和一杯可乐",
+    autofill_btn: "AI 自动填充",
+    generating: "生成中...",
+    ai_error: "无法估算，请重试。"
   }
 };
 
