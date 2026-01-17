@@ -127,6 +127,7 @@ const AppContent: React.FC<AppContentProps> = ({ user, onLogin, onLogout, onUpda
         return (
           <InsightsScreen 
             onNavigate={navigateTo} 
+            user={user}
             onFabClick={handleFabClick} 
           />
         );
