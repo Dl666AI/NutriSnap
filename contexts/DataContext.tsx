@@ -1,0 +1,124 @@
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { Meal, Macro } from '../types';
+
+interface DailyTotals {
+  calories: number;
+  carbs: number;
+  protein: number;
+  fat: number;
+  sugar: number;
+}
+
+interface DataContextType {
+  meals: Meal[];
+  addMeal: (meal: Meal) => void;
+  removeMeal: (id: string) => void;
+  totals: DailyTotals;
+  targets: DailyTotals;
+}
+
+const DataContext = createContext<DataContextType | undefined>(undefined);
+
+const DEFAULT_TARGETS = {
+  calories: 2000,
+  carbs: 250,
+  protein: 140,
+  fat: 70,
+  sugar: 50,
+};
+
+// Initial demo data
+const DEMO_MEALS: Meal[] = [
+  {
+    id: '1',
+    name: 'Avocado Toast',
+    time: '8:30 AM',
+    calories: 350,
+    protein: 8,
+    sugar: 4,
+    imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCL-m-VY6XKvcYscM3D_-IXKQGx2jx8em2yXnwD33SSpy05NZQcl82Oy6_AHB54sXd8n9-PKhSyLxcJ_waWBjgaE-3y_l9z5w6eWrRLCZM47Zesrhspi0Gmf0uhQ1PzWEmGvbuKKRsPidzh69W1uyMJk28tI_FMdNV2-XXGgafoSKDkXOYvXTQKhqSr9Ay98r-KpqYVsAK6xN1AKmH1KBjXtX7yfuTAE9XkvppdBChoh4C9E4tEj_NrLjqyJaGvKqpamEyArLm80FPX',
+    type: 'Breakfast'
+  },
+  {
+    id: '2',
+    name: 'Chicken Salad',
+    time: '1:15 PM',
+    calories: 420,
+    protein: 32,
+    sugar: 6,
+    imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBL6S-dLF_MhW5_YkEPdhS5HbKzncJDt85F7PuvgZKNxJDCVCghetLdo7JBkNF1hgFz3st5lyfMM9oLgsFTpB5ZRL4LAxKY4UiCPpoj0GBRaqCzH1CP6Xl-yUY5kwHetiNYyypDNZasmp_tSObUzi5rFJl2DQy87KJT8GxikqOCOZuyVQ93mPx0L9b5caml2eaIBvSszvKaau2VhhCpHtTO_XOEHniOrB_PHIdjL7OrhwpS0VCNqfbQxorMQtheh5mOWBe6NpRfHLVI',
+    type: 'Lunch'
+  }
+];
+
+export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [meals, setMeals] = useState<Meal[]>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('nutrisnap_meals');
+      return saved ? JSON.parse(saved) : DEMO_MEALS;
+    }
+    return DEMO_MEALS;
+  });
+
+  useEffect(() => {
+    localStorage.setItem('nutrisnap_meals', JSON.stringify(meals));
+  }, [meals]);
+
+  const addMeal = (meal: Meal) => {
+    setMeals(prev => [meal, ...prev]);
+  };
+
+  const removeMeal = (id: string) => {
+    setMeals(prev => prev.filter(m => m.id !== id));
+  };
+
+  const totals = meals.reduce((acc, meal) => {
+    acc.calories += (meal.calories || 0);
+    
+    // If explicit macros exist, use them. Otherwise estimate for demonstration.
+    if (meal.protein !== undefined) {
+      acc.protein += meal.protein;
+    } else {
+      acc.protein += Math.round(((meal.calories || 0) * 0.25) / 4);
+    }
+
+    if (meal.sugar !== undefined) {
+      acc.sugar += meal.sugar;
+    }
+
+    // Still estimate fat/carbs for general UI if not provided
+    if (meal.fat !== undefined) {
+      acc.fat += meal.fat;
+    } else {
+      acc.fat += Math.round(((meal.calories || 0) * 0.30) / 9);
+    }
+
+    if (meal.carbs !== undefined) {
+      acc.carbs += meal.carbs;
+    } else {
+      acc.carbs += Math.round(((meal.calories || 0) * 0.45) / 4);
+    }
+    
+    return acc;
+  }, { calories: 0, carbs: 0, protein: 0, fat: 0, sugar: 0 });
+
+  return (
+    <DataContext.Provider value={{ 
+      meals, 
+      addMeal, 
+      removeMeal, 
+      totals, 
+      targets: DEFAULT_TARGETS 
+    }}>
+      {children}
+    </DataContext.Provider>
+  );
+};
+
+export const useData = () => {
+  const context = useContext(DataContext);
+  if (context === undefined) {
+    throw new Error('useData must be used within a DataProvider');
+  }
+  return context;
+};

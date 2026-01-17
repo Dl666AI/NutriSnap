@@ -1,20 +1,64 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# NutriSnap - AI-Powered Nutrition Tracking
 
-# Run and deploy your AI Studio app
+NutriSnap is a world-class, mobile-first web application designed to simplify nutrition tracking through artificial intelligence. By leveraging computer vision and a seamless user interface, NutriSnap helps users maintain their health goals with minimal friction.
 
-This contains everything you need to run your app locally.
+## Project Description
 
-View your app in AI Studio: https://ai.studio/apps/drive/1y2gfdtzQuI1ZRkZ16hSGqUNiApIMI052
+NutriSnap aims to bridge the gap between "wanting to eat healthy" and "actually tracking intake." Traditional apps are tedious; NutriSnap makes logging a meal as simple as snapping a photo. It provides real-time feedback on calories and macronutrients (Protein, Carbs, Fat, Sugar) to help users stay within their daily targets.
 
-## Run Locally
+### Key Features
 
-**Prerequisites:**  Node.js
+*   **AI Vision Logging**: Real-time camera integration to capture and identify meals instantly.
+*   **Manual Entry**: Flexibility to log meals without photos, allowing manual input of calories and macros.
+*   **Smart Diary**: A chronological record of the day's intake grouped by meal type (Breakfast, Lunch, Dinner, Snack).
+*   **Progress Insights**: Visual representation of weekly calorie trends and macronutrient distribution.
+*   **Persistent Profile**: User profiles with simulated authentication (Google/Apple) and persistent local storage.
+*   **Adaptive Theming**: Full support for Light and Dark modes with system synchronization.
 
+---
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+## Overall Architecture
+
+NutriSnap follows a modular, component-based architecture built with **React** and **Tailwind CSS**.
+
+### 1. Navigation & Routing
+The app uses a **State-Based Router** in `App.tsx` rather than traditional URL routing. This provides a smoother, "app-like" experience by managing a `currentScreen` state. 
+*   **Tab System**: Remembers the last active main tab (Home, Diary, Insights, Profile) to return the user there after a flow (like Camera or Manual Entry) is completed or cancelled.
+
+### 2. State Management
+*   **DataContext**: Centralized store for the `meals` array. It handles adding/removing entries and computes real-time `totals` (calories, macros) and progress against `targets`.
+*   **ThemeContext**: Manages the application's appearance state (Light/Dark/System) and persists the choice to `localStorage`.
+*   **Local Persistence**: Both user authentication and nutrition data are mirrored to `localStorage` to ensure data survives page refreshes.
+
+### 3. Component Hierarchy
+*   **Screens**: High-level components representing full views (e.g., `HomeScreen`, `CameraScreen`).
+*   **UI Components**: Reusable interface elements like `BottomNav`, `MacroCards`, and `AuthSimulation`.
+*   **Contexts**: Providers that wrap the application to inject global logic.
+
+### 4. Technical Stack
+*   **Frontend**: React 19 (ES6+ Modules).
+*   **Styling**: Tailwind CSS via CDN with a customized `tailwind.config`.
+*   **Icons**: Material Symbols Outlined for a clean, modern iconography.
+*   **Hardware Integration**: Browser `MediaDevices` API for real-time camera access and frame capture.
+
+### 5. Design Language
+The design follows a **Sophisticated Nature** aesthetic:
+*   **Primary Color**: `#9cab8c` (Sage Green) - evokes health and freshness.
+*   **Accent Color**: `#F8DDA4` (Creamy Sand) - provides a warm, organic contrast.
+*   **Micro-interactions**: Subtle CSS animations (`float-up`, `breath`, `scan`) and backdrop blurs create a high-end, premium feel.
+
+---
+
+## AI Implementation Roadmap
+While currently using high-fidelity mock data for result simulation, the architecture is designed to integrate with the **Google Gemini API**:
+1.  **Image-to-Text**: Sending captured base64 frames to `gemini-3-flash-preview`.
+2.  **Structured JSON**: Prompting the model to return nutrition data in a structured schema.
+3.  **Grounding**: Using search grounding for specialized or branded food items.
+
+---
+
+## Development & Deployment
+The project is structured to run directly in a browser environment using ESM imports.
+*   **Root**: `index.html`
+*   **Entry**: `index.tsx`
+*   **Configurations**: `metadata.json` (Permissions) and `tailwind.config` (Theming).

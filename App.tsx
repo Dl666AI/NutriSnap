@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { Screen } from './types';
+import React, { useState, useEffect } from 'react';
+import { Screen, User } from './types';
 import { ThemeProvider } from './contexts/ThemeContext';
+import { DataProvider } from './contexts/DataContext';
 import SplashScreen from './components/SplashScreen';
 import HomeScreen from './components/HomeScreen';
 import CameraScreen from './components/CameraScreen';
@@ -8,10 +9,51 @@ import ResultScreen from './components/ResultScreen';
 import ProfileScreen from './components/ProfileScreen';
 import DiaryScreen from './components/DiaryScreen';
 import InsightsScreen from './components/InsightsScreen';
+import ManualEntryScreen from './components/ManualEntryScreen';
 
 const AppContent: React.FC = () => {
   const [currentScreen, setCurrentScreen] = useState<Screen>('SPLASH');
+  const [previousTab, setPreviousTab] = useState<Screen>('HOME');
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
+  
+  // Persistent User State
+  const [user, setUser] = useState<User | null>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('nutrisnap_user');
+      return saved ? JSON.parse(saved) : null;
+    }
+    return null;
+  });
+
+  // Simplified Login Handler (Simulates Google Auth)
+  const handleLogin = (email: string) => {
+    // Extract name from email (e.g. "john.doe@gmail.com" -> "John Doe")
+    const namePart = email.split('@')[0];
+    const formattedName = namePart
+      .split(/[._]/)
+      .map(s => s.charAt(0).toUpperCase() + s.slice(1))
+      .join(' ');
+
+    const newUser: User = {
+      id: Date.now().toString(), // Generate a fake ID
+      name: formattedName || "NutriSnap User",
+      email: email,
+      // Generate a nice avatar based on the name
+      photoUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(formattedName)}&background=9cab8c&color=fff&size=128`
+    };
+    
+    setUser(newUser);
+    localStorage.setItem('nutrisnap_user', JSON.stringify(newUser));
+  };
+
+  // Wrapper for navigation to track "tab" screens vs "flow" screens
+  const navigateTo = (screen: Screen) => {
+    // If navigating to a main tab, remember it
+    if (['HOME', 'DIARY', 'INSIGHTS', 'PROFILE'].includes(screen)) {
+      setPreviousTab(screen);
+    }
+    setCurrentScreen(screen);
+  };
 
   const handleCapture = (imageSrc?: string) => {
     if (imageSrc) {
@@ -20,24 +62,38 @@ const AppContent: React.FC = () => {
     setCurrentScreen('RESULT');
   };
 
+  const logoutUser = () => {
+    setUser(null);
+    localStorage.removeItem('nutrisnap_user');
+  };
+
   const renderScreen = () => {
     switch (currentScreen) {
       case 'SPLASH':
-        return <SplashScreen onComplete={() => setCurrentScreen('HOME')} />;
+        return <SplashScreen onComplete={() => navigateTo('HOME')} />;
       case 'HOME':
-        return <HomeScreen onNavigate={setCurrentScreen} />;
+        return <HomeScreen onNavigate={navigateTo} user={user} />;
       case 'DIARY':
-        return <DiaryScreen onNavigate={setCurrentScreen} />;
+        return <DiaryScreen onNavigate={navigateTo} />;
       case 'INSIGHTS':
-        return <InsightsScreen onNavigate={setCurrentScreen} />;
+        return <InsightsScreen onNavigate={navigateTo} />;
       case 'CAMERA':
-        return <CameraScreen onCapture={handleCapture} onCancel={() => setCurrentScreen('HOME')} />;
+        return <CameraScreen onCapture={handleCapture} onCancel={() => setCurrentScreen(previousTab)} onManualEntry={() => setCurrentScreen('MANUAL_ENTRY')} />;
+      case 'MANUAL_ENTRY':
+        return <ManualEntryScreen onSave={() => setCurrentScreen(previousTab)} onCancel={() => setCurrentScreen(previousTab)} />;
       case 'RESULT':
-        return <ResultScreen image={capturedImage} onSave={() => setCurrentScreen('HOME')} onRetake={() => setCurrentScreen('CAMERA')} />;
+        return <ResultScreen image={capturedImage} onSave={() => setCurrentScreen(previousTab)} onRetake={() => setCurrentScreen('CAMERA')} />;
       case 'PROFILE':
-        return <ProfileScreen onNavigate={setCurrentScreen} />;
+        return (
+          <ProfileScreen 
+            onNavigate={navigateTo} 
+            user={user} 
+            onLogout={logoutUser}
+            onLogin={handleLogin}
+          />
+        );
       default:
-        return <HomeScreen onNavigate={setCurrentScreen} />;
+        return <HomeScreen onNavigate={navigateTo} user={user} />;
     }
   };
 
@@ -51,7 +107,9 @@ const AppContent: React.FC = () => {
 const App: React.FC = () => {
   return (
     <ThemeProvider>
-      <AppContent />
+      <DataProvider>
+        <AppContent />
+      </DataProvider>
     </ThemeProvider>
   );
 };
