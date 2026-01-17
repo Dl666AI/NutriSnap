@@ -97,7 +97,8 @@ export const translations = {
     terms: "Terms of Service",
     privacy: "Privacy Policy",
     agree: "By continuing, you agree to NutriSnap's",
-    and: "and"
+    and: "and",
+    start_camera: "Start Camera"
   },
   zh: {
     app_name: "NutriSnap",
@@ -193,7 +194,8 @@ export const translations = {
     terms: "服务条款",
     privacy: "隐私政策",
     agree: "继续即表示您同意 NutriSnap 的",
-    and: "和"
+    and: "和",
+    start_camera: "启动相机"
   }
 };
 
