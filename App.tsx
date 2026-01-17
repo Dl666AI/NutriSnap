@@ -151,7 +151,15 @@ const AppContent: React.FC<AppContentProps> = ({ user, onLogin, onLogout, onUpda
             />
         );
       case 'RESULT':
-        return <ResultScreen image={capturedImage} targetDate={targetDate} onSave={() => setCurrentScreen(previousTab)} onRetake={() => setCurrentScreen('CAMERA')} />;
+        return (
+          <ResultScreen 
+            image={capturedImage} 
+            targetDate={targetDate} 
+            onSave={() => setCurrentScreen(previousTab)} 
+            onRetake={() => setCurrentScreen('CAMERA')} 
+            onManualEntry={() => { setEditingMeal(null); setCurrentScreen('MANUAL_ENTRY'); }}
+          />
+        );
       case 'PROFILE':
         return (
           <ProfileScreen 
