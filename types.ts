@@ -32,8 +32,23 @@ export interface Macro {
   icon: string;
 }
 
+// Google Identity Services Types
+export interface GoogleCredentialResponse {
+  credential: string;
+  select_by?: string;
+  clientId?: string;
+}
+
 declare global {
   interface Window {
-    google: any;
+    google: {
+      accounts: {
+        id: {
+          initialize: (config: { client_id: string; callback: (response: GoogleCredentialResponse) => void; auto_select?: boolean }) => void;
+          renderButton: (parent: HTMLElement | null, options: { theme?: 'outline' | 'filled_blue' | 'filled_black'; size?: 'large' | 'medium' | 'small'; type?: 'standard' | 'icon'; shape?: 'rectangular' | 'pill' | 'circle' | 'square'; width?: string; logo_alignment?: 'left' | 'center' }) => void;
+          prompt: () => void;
+        };
+      };
+    };
   }
 }

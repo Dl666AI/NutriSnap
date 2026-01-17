@@ -15,7 +15,7 @@ import AddMenu from './components/AddMenu';
 // Props for the internal app content (now that User state is lifted)
 interface AppContentProps {
   user: User | null;
-  onLogin: (email: string) => void;
+  onLogin: (user: User) => void;
   onLogout: () => void;
 }
 
@@ -194,26 +194,7 @@ const App: React.FC = () => {
     return null;
   });
 
-  const handleLogin = (email: string) => {
-    const namePart = email.split('@')[0];
-    const formattedName = namePart
-      .split(/[._]/)
-      .map(s => s.charAt(0).toUpperCase() + s.slice(1))
-      .join(' ');
-
-    // Use a deterministic ID based on the email. 
-    // This ensures that if the user logs out and logs back in with the same email,
-    // they get the same ID and can access their previously saved data.
-    // We sanitize the email to make it safe for storage keys.
-    const stableId = `user_${email.toLowerCase().replace(/[^a-z0-9]/g, '_')}`;
-
-    const newUser: User = {
-      id: stableId, 
-      name: formattedName || "NutriSnap User",
-      email: email,
-      photoUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(formattedName)}&background=9cab8c&color=fff&size=128`
-    };
-    
+  const handleLogin = (newUser: User) => {
     setUser(newUser);
     localStorage.setItem('nutrisnap_user', JSON.stringify(newUser));
   };

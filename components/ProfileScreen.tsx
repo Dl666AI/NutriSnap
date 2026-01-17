@@ -1,13 +1,24 @@
-import React, { useState } from 'react';
-import { Screen, Theme, User } from '../types';
+import React, { useState, useEffect, useRef } from 'react';
+import { Screen, Theme, User, GoogleCredentialResponse } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
 import BottomNav from './BottomNav';
+
+// ------------------------------------------------------------------
+// CONFIGURATION
+// ------------------------------------------------------------------
+// IMPORTANT: To make Google Login work, you must create a Project in 
+// Google Cloud Console, setup OAuth Consent Screen, create a Credential 
+// (Client ID), and paste it below.
+// ------------------------------------------------------------------
+const GOOGLE_CLIENT_ID = '19113468273-pbbkm1s0evobrt5m1phtm7n31rjfbq3e.apps.googleusercontent.com'; 
+// Example: '1234567890-abcdefghijklmnopqrstuvwxyz.apps.googleusercontent.com'
+// ------------------------------------------------------------------
 
 interface ProfileScreenProps {
   onNavigate: (screen: Screen) => void;
   user?: User | null;
   onLogout: () => void;
-  onLogin: (email: string) => void;
+  onLogin: (user: User) => void;
   onFabClick: () => void;
 }
 
@@ -20,26 +31,97 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({
 }) => {
   const { theme, setTheme } = useTheme();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
-  const [emailInput, setEmailInput] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
+  
+  // Ref for the Google button container
+  const googleButtonRef = useRef<HTMLDivElement>(null);
   
   const days = Array.from({ length: 14 }, (_, i) => i + 1);
 
   const toggleSettings = () => setIsSettingsOpen(!isSettingsOpen);
 
-  const handleLoginSubmit = (e: React.FormEvent) => {
-      e.preventDefault();
-      if (!emailInput) return;
-      
-      setIsLoading(true);
-      // Simulate network delay for realism
-      setTimeout(() => {
-          onLogin(emailInput);
-          setIsLoginModalOpen(false);
-          setIsLoading(false);
-      }, 1000);
+  // Helper: Parse JWT Token safely
+  const parseJwt = (token: string) => {
+    try {
+      return JSON.parse(atob(token.split('.')[1]));
+    } catch (e) {
+      console.error("Failed to parse JWT", e);
+      return null;
+    }
   };
+
+  // Handle the Google Login Response
+  const handleGoogleResponse = (response: GoogleCredentialResponse) => {
+      if (response.credential) {
+        const payload = parseJwt(response.credential);
+        
+        if (payload) {
+          const newUser: User = {
+            id: payload.sub, // 'sub' is the unique Google User ID
+            name: payload.name || 'User',
+            email: payload.email,
+            photoUrl: payload.picture || `https://ui-avatars.com/api/?name=${encodeURIComponent(payload.name)}&background=9cab8c&color=fff`
+          };
+          onLogin(newUser);
+          setLoginError(null);
+        } else {
+          setLoginError("Failed to decode user information from Google.");
+        }
+      }
+  };
+
+  // Initialize Google Sign-In
+  useEffect(() => {
+    // Skip if logged in or if key is missing (handled by UI)
+    if (user || GOOGLE_CLIENT_ID === 'PLACEHOLDER') return;
+
+    let intervalId: ReturnType<typeof setInterval>;
+
+    const initializeGSI = () => {
+        if (window.google && googleButtonRef.current) {
+            try {
+                // Initialize the client
+                window.google.accounts.id.initialize({
+                    client_id: GOOGLE_CLIENT_ID,
+                    callback: handleGoogleResponse,
+                    auto_select: false
+                });
+
+                // Render the button
+                window.google.accounts.id.renderButton(
+                    googleButtonRef.current,
+                    { 
+                        theme: theme === 'dark' ? 'filled_black' : 'outline', 
+                        size: 'large', 
+                        type: 'standard',
+                        shape: 'pill',
+                        width: '100%',
+                        logo_alignment: 'left'
+                    }
+                );
+            } catch (err) {
+                console.error("GSI Error:", err);
+                setLoginError("Error initializing Google Sign-In.");
+            }
+            return true;
+        }
+        return false;
+    };
+
+    // Attempt to initialize immediately
+    if (!initializeGSI()) {
+        // If script hasn't loaded yet, retry every 100ms for a few seconds
+        intervalId = setInterval(() => {
+            if (initializeGSI()) {
+                clearInterval(intervalId);
+            }
+        }, 100);
+    }
+
+    return () => {
+        if (intervalId) clearInterval(intervalId);
+    };
+  }, [user, theme, onLogin]);
 
   // Logged-out Login View
   if (!user) {
@@ -78,29 +160,37 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
           <div className="w-full space-y-4 flex flex-col items-center max-w-[320px]">
             
-            {/* Custom Google Button */}
-            <button 
-                onClick={() => setIsLoginModalOpen(true)}
-                className="w-full h-[44px] bg-white dark:bg-[#131314] text-neutral-600 dark:text-white rounded-full flex items-center justify-center gap-3 font-medium border border-neutral-200 dark:border-neutral-600 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors relative overflow-hidden"
-            >
-                <div className="size-5 flex items-center justify-center">
-                    <svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" className="block h-full w-full">
-                        <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"></path>
-                        <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"></path>
-                        <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24s.92 7.54 2.56 10.78l7.97-6.19z"></path>
-                        <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"></path>
-                    </svg>
-                </div>
-                <span className="text-sm font-roboto tracking-tight">Sign in with Google</span>
-            </button>
+            {/* Real Google Button Container */}
+            <div className="w-full min-h-[44px]">
+                {GOOGLE_CLIENT_ID === 'PLACEHOLDER' ? (
+                     <div className="p-4 bg-surface-light dark:bg-surface-dark border border-neutral-200 dark:border-neutral-700 rounded-2xl text-left shadow-sm">
+                        <div className="flex items-center gap-2 mb-2 text-amber-600 dark:text-amber-400">
+                            <span className="material-symbols-outlined text-xl">warning</span>
+                            <span className="text-sm font-bold">Setup Required</span>
+                        </div>
+                        <p className="text-xs text-neutral-600 dark:text-neutral-400 leading-relaxed">
+                            To enable real Google Login, please open <code>components/ProfileScreen.tsx</code> and replace <code>PLACEHOLDER</code> with your actual <strong>Google Client ID</strong>.
+                        </p>
+                     </div>
+                ) : (
+                    <div ref={googleButtonRef} className="w-full flex justify-center"></div>
+                )}
+            </div>
 
-            {/* Apple Login Visual */}
-            <button className="w-full h-[44px] bg-black text-white rounded-full flex items-center justify-center gap-3 font-medium hover:bg-neutral-800 transition-colors">
+            {/* Apple Login Visual Placeholder */}
+            <button 
+                onClick={() => alert("Apple Sign-In requires developer configuration.")}
+                className="w-full h-[44px] bg-black text-white rounded-full flex items-center justify-center gap-3 font-medium hover:bg-neutral-800 transition-colors"
+            >
                 <svg className="h-4 w-4 fill-current" viewBox="0 0 24 24">
                     <path d="M17.05 20.28c-.98.95-2.05 1.78-3.14 1.78-1.09 0-1.45-.67-2.73-.67-1.27 0-1.7.64-2.7.67-1.02.03-2.07-.86-3.13-1.87C3.2 18.06 1.34 14.15 1.34 10.61c0-3.53 2.18-5.39 4.31-5.39 1.12 0 2.05.67 2.76.67.71 0 1.83-.73 3.12-.73 1.36 0 2.55.51 3.32 1.48-3.12 1.76-2.61 5.91.5 7.15-.71 1.71-1.63 3.42-2.3 4.49zM12.03 4.54c-.11-1.89 1.48-3.53 3.2-3.53.11 1.94-1.61 3.65-3.2 3.53z"></path>
                 </svg>
                 <span className="text-sm">Sign in with Apple</span>
             </button>
+            
+            {loginError && (
+                <p className="text-xs text-red-500 mt-2 bg-red-50 dark:bg-red-900/10 p-2 rounded-lg">{loginError}</p>
+            )}
           </div>
 
           <p className="mt-8 text-[11px] text-neutral-400 max-w-[280px]">
@@ -110,56 +200,6 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
         {isSettingsOpen && <SettingsSheet theme={theme} setTheme={setTheme} onClose={toggleSettings} onLogout={onLogout} isLoggedIn={false} />}
         
-        {/* Simplified Login Modal (Looks like Google Auth) */}
-        {isLoginModalOpen && (
-             <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
-                <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsLoginModalOpen(false)}></div>
-                <div className="relative bg-white dark:bg-[#1e1e1e] rounded-xl p-8 w-full max-w-[400px] animate-enter shadow-2xl flex flex-col items-center">
-                    {/* Google Logo */}
-                    <svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" className="size-10 mb-4">
-                        <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"></path>
-                        <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"></path>
-                        <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24s.92 7.54 2.56 10.78l7.97-6.19z"></path>
-                        <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"></path>
-                    </svg>
-                    
-                    <h3 className="text-2xl font-medium text-neutral-900 dark:text-white mb-2">Sign in</h3>
-                    <p className="text-base text-neutral-900 dark:text-white mb-10">to continue to NutriSnap</p>
-                    
-                    <form onSubmit={handleLoginSubmit} className="w-full">
-                        <div className="relative mb-8 group">
-                            <input 
-                                type="email" 
-                                required
-                                value={emailInput}
-                                onChange={(e) => setEmailInput(e.target.value)}
-                                className="peer w-full h-14 px-3 pt-1 rounded border border-neutral-300 dark:border-neutral-700 bg-transparent text-neutral-900 dark:text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all placeholder-transparent"
-                                placeholder="Email or phone"
-                                autoFocus
-                            />
-                            <label className="absolute left-3 top-[-10px] text-xs px-1 bg-white dark:bg-[#1e1e1e] text-blue-600 dark:text-blue-400 transition-all peer-placeholder-shown:top-4 peer-placeholder-shown:text-base peer-placeholder-shown:text-neutral-500 peer-focus:top-[-10px] peer-focus:text-xs peer-focus:text-blue-600 dark:peer-focus:text-blue-400 cursor-text">
-                                Email or phone
-                            </label>
-                        </div>
-                        
-                        <div className="flex justify-between items-center w-full">
-                            <button type="button" className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 px-2 py-1.5 rounded" onClick={() => setIsLoginModalOpen(false)}>
-                                Create account
-                            </button>
-                            <button 
-                                type="submit"
-                                disabled={isLoading}
-                                className="bg-[#0b57d0] hover:bg-[#0b57d0]/90 text-white text-sm font-medium px-6 py-2.5 rounded-full transition-colors disabled:opacity-70 flex items-center gap-2"
-                            >
-                                {isLoading && <div className="size-3 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>}
-                                Next
-                            </button>
-                        </div>
-                    </form>
-                </div>
-             </div>
-        )}
-
         <BottomNav currentScreen="PROFILE" onNavigate={onNavigate} onCameraClick={onFabClick} />
       </div>
     );
