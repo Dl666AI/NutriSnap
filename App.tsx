@@ -52,6 +52,20 @@ const AppContent: React.FC<AppContentProps> = ({ user, onLogin, onLogout }) => {
     setCurrentScreen(screen);
   };
 
+  // Shortcut handler for the FAB (Center Camera Button)
+  const handleFabClick = () => {
+      setEditingMeal(null);
+      setTargetDate(getTodayString()); // Always target today
+      setShouldLaunchGallery(false);   // Always open camera directly
+      
+      // Ensure we can go back to where we came from
+      if (['HOME', 'DIARY', 'INSIGHTS', 'PROFILE'].includes(currentScreen)) {
+        setPreviousTab(currentScreen);
+      }
+      
+      setCurrentScreen('CAMERA');
+  };
+
   // Handler for adding from Diary (preserves selected date)
   const handleAddMealFromDiary = (date: string) => {
       setTargetDate(date);
@@ -91,11 +105,30 @@ const AppContent: React.FC<AppContentProps> = ({ user, onLogin, onLogout }) => {
       case 'SPLASH':
         return <SplashScreen onComplete={() => navigateTo('HOME')} />;
       case 'HOME':
-        return <HomeScreen onNavigate={navigateTo} user={user} onEdit={handleEditMeal} />;
+        return (
+          <HomeScreen 
+            onNavigate={navigateTo} 
+            user={user} 
+            onEdit={handleEditMeal} 
+            onFabClick={handleFabClick} 
+          />
+        );
       case 'DIARY':
-        return <DiaryScreen onNavigate={navigateTo} onEdit={handleEditMeal} onAddMeal={handleAddMealFromDiary} />;
+        return (
+          <DiaryScreen 
+            onNavigate={navigateTo} 
+            onEdit={handleEditMeal} 
+            onAddMeal={handleAddMealFromDiary} 
+            onFabClick={handleFabClick} 
+          />
+        );
       case 'INSIGHTS':
-        return <InsightsScreen onNavigate={navigateTo} />;
+        return (
+          <InsightsScreen 
+            onNavigate={navigateTo} 
+            onFabClick={handleFabClick} 
+          />
+        );
       case 'CAMERA':
         return (
             <CameraScreen 
@@ -123,10 +156,18 @@ const AppContent: React.FC<AppContentProps> = ({ user, onLogin, onLogout }) => {
             user={user} 
             onLogout={onLogout}
             onLogin={onLogin}
+            onFabClick={handleFabClick}
           />
         );
       default:
-        return <HomeScreen onNavigate={navigateTo} user={user} onEdit={handleEditMeal} />;
+        return (
+          <HomeScreen 
+            onNavigate={navigateTo} 
+            user={user} 
+            onEdit={handleEditMeal} 
+            onFabClick={handleFabClick}
+          />
+        );
     }
   };
 

@@ -7,9 +7,10 @@ interface HomeScreenProps {
   onNavigate: (screen: Screen) => void;
   user?: User | null;
   onEdit: (meal: Meal) => void;
+  onFabClick: () => void;
 }
 
-const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigate, user, onEdit }) => {
+const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigate, user, onEdit, onFabClick }) => {
   const { totals, targets, meals, getTodayString } = useData();
 
   const caloriesLeft = Math.max(0, targets.calories - totals.calories);
@@ -189,7 +190,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigate, user, onEdit }) => 
       <BottomNav 
         currentScreen="HOME" 
         onNavigate={onNavigate} 
-        onCameraClick={() => onNavigate('ADD_MENU')} 
+        onCameraClick={onFabClick} 
       />
     </div>
   );

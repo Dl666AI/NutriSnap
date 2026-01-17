@@ -4,9 +4,10 @@ import BottomNav from './BottomNav';
 
 interface InsightsScreenProps {
   onNavigate: (screen: Screen) => void;
+  onFabClick: () => void;
 }
 
-const InsightsScreen: React.FC<InsightsScreenProps> = ({ onNavigate }) => {
+const InsightsScreen: React.FC<InsightsScreenProps> = ({ onNavigate, onFabClick }) => {
   return (
     <div className="relative flex h-full min-h-screen w-full flex-col max-w-md mx-auto bg-background-light dark:bg-background-dark pb-32 transition-colors duration-300">
       {/* Header */}
@@ -124,7 +125,7 @@ const InsightsScreen: React.FC<InsightsScreenProps> = ({ onNavigate }) => {
       <BottomNav 
         currentScreen="INSIGHTS" 
         onNavigate={onNavigate} 
-        onCameraClick={() => onNavigate('ADD_MENU')} 
+        onCameraClick={onFabClick} 
       />
     </div>
   );

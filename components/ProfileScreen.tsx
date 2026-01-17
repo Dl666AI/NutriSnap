@@ -8,13 +8,15 @@ interface ProfileScreenProps {
   user?: User | null;
   onLogout: () => void;
   onLogin: (email: string) => void;
+  onFabClick: () => void;
 }
 
 const ProfileScreen: React.FC<ProfileScreenProps> = ({ 
     onNavigate, 
     user, 
     onLogout,
-    onLogin
+    onLogin,
+    onFabClick
 }) => {
   const { theme, setTheme } = useTheme();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -158,7 +160,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({
              </div>
         )}
 
-        <BottomNav currentScreen="PROFILE" onNavigate={onNavigate} onCameraClick={() => onNavigate('ADD_MENU')} />
+        <BottomNav currentScreen="PROFILE" onNavigate={onNavigate} onCameraClick={onFabClick} />
       </div>
     );
   }
@@ -294,7 +296,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({
       <BottomNav 
         currentScreen="PROFILE" 
         onNavigate={onNavigate} 
-        onCameraClick={() => onNavigate('ADD_MENU')} 
+        onCameraClick={onFabClick} 
       />
     </div>
   );

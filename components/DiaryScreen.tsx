@@ -7,9 +7,10 @@ interface DiaryScreenProps {
   onNavigate: (screen: Screen) => void;
   onEdit: (meal: Meal) => void;
   onAddMeal: (date: string) => void;
+  onFabClick: () => void;
 }
 
-const DiaryScreen: React.FC<DiaryScreenProps> = ({ onNavigate, onEdit, onAddMeal }) => {
+const DiaryScreen: React.FC<DiaryScreenProps> = ({ onNavigate, onEdit, onAddMeal, onFabClick }) => {
   const { meals, targets, removeMeal, getTodayString } = useData();
   
   // State for current selected date (Data View)
@@ -331,7 +332,7 @@ const DiaryScreen: React.FC<DiaryScreenProps> = ({ onNavigate, onEdit, onAddMeal
       <BottomNav 
         currentScreen="DIARY" 
         onNavigate={onNavigate} 
-        onCameraClick={() => onAddMeal(selectedDateStr)} 
+        onCameraClick={onFabClick} 
       />
     </div>
   );
