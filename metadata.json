@@ -1,0 +1,5 @@
+{
+  "name": "NutriSnap",
+  "description": "A beautiful, AI-powered nutrition tracking application featuring calorie counting, macro tracking, and meal recognition.",
+  "requestFramePermissions": []
+}
