@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Screen, Theme, User, GoogleCredentialResponse, Goal } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
+import { useLanguage, Language } from '../contexts/LanguageContext';
 import BottomNav from './BottomNav';
 import AuthSimulation from './AuthSimulation';
 
@@ -32,6 +33,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({
     onFabClick
 }) => {
   const { theme, setTheme } = useTheme();
+  const { language, setLanguage, t } = useLanguage();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
@@ -82,7 +84,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({
   const handleGuestLogin = () => {
       const guestUser: User = {
           id: 'guest_' + Date.now(),
-          name: 'Guest',
+          name: t('guest'),
           email: '',
           photoUrl: '', 
           dailyCalories: 2000,
@@ -200,7 +202,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({
                      <div className="p-4 bg-surface-light dark:bg-surface-dark border border-neutral-200 dark:border-neutral-700 rounded-2xl text-left shadow-sm">
                         <div className="flex items-center gap-2 mb-2 text-amber-600 dark:text-amber-400">
                             <span className="material-symbols-outlined text-xl">warning</span>
-                            <span className="text-sm font-bold">Setup Required</span>
+                            <span className="text-sm font-bold">{t('setup_required')}</span>
                         </div>
                         <p className="text-xs text-neutral-600 dark:text-neutral-400 leading-relaxed">
                             To enable real Google Login, please open <code>components/ProfileScreen.tsx</code> and replace <code>PLACEHOLDER</code> with your actual <strong>Google Client ID</strong>.
@@ -221,7 +223,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({
                 className="w-full h-[44px] bg-surface-light dark:bg-surface-dark border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-white rounded-full flex items-center justify-center gap-2 font-bold hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors"
             >
                 <span className="material-symbols-outlined text-xl">person</span>
-                <span className="text-sm">Continue as Guest</span>
+                <span className="text-sm">{t('continue_guest')}</span>
             </button>
             
             {loginError && (
@@ -244,11 +246,11 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({
           </div>
 
           <p className="mt-8 text-[11px] text-neutral-400 max-w-[280px]">
-            By continuing, you agree to NutriSnap's <span className="underline cursor-pointer">Terms of Service</span> and <span className="underline cursor-pointer">Privacy Policy</span>.
+            {t('agree')} <span className="underline cursor-pointer">{t('terms')}</span> {t('and')} <span className="underline cursor-pointer">{t('privacy')}</span>.
           </p>
         </main>
 
-        {isSettingsOpen && <SettingsSheet theme={theme} setTheme={setTheme} onClose={toggleSettings} onLogout={onLogout} isLoggedIn={false} />}
+        {isSettingsOpen && <SettingsSheet theme={theme} setTheme={setTheme} language={language} setLanguage={setLanguage} onClose={toggleSettings} onLogout={onLogout} isLoggedIn={false} />}
         
         {/* Render the simulation logic when dev mode is active */}
         {showDevAuth && (
@@ -289,7 +291,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({
             <div className="absolute bottom-0 right-0 size-4 bg-primary rounded-full border-2 border-white dark:border-background-dark"></div>
           </div>
           <div className="flex flex-col">
-            <span className="text-sm font-medium text-neutral-500 dark:text-neutral-400">Logged in as</span>
+            <span className="text-sm font-medium text-neutral-500 dark:text-neutral-400">{t('logged_in_as')}</span>
             <h1 className="text-xl font-bold text-neutral-900 dark:text-white leading-tight">{user.name}</h1>
           </div>
         </div>
@@ -304,13 +306,13 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({
       {/* Stats Dashboard */}
       <section className="px-6 py-4 animate-enter" style={{animationDelay: '0.1s'}}>
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-neutral-900 dark:text-white text-lg font-bold">My Stats</h2>
+          <h2 className="text-neutral-900 dark:text-white text-lg font-bold">{t('my_stats')}</h2>
           <button 
             onClick={toggleEditProfile}
             className="text-primary font-semibold text-sm flex items-center gap-1 hover:text-primary-dark transition-colors"
           >
             <span className="material-symbols-outlined text-sm">edit</span>
-            Edit
+            {t('edit')}
           </button>
         </div>
         <div className="grid grid-cols-2 gap-4">
@@ -320,7 +322,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({
           >
             <div className="flex items-center gap-2 text-neutral-500 dark:text-neutral-400">
               <span className="material-symbols-outlined text-lg">monitor_weight</span>
-              <span className="text-sm font-medium">Weight</span>
+              <span className="text-sm font-medium">{t('weight')}</span>
             </div>
             <div>
               <div className="text-2xl font-extrabold text-neutral-900 dark:text-white">
@@ -341,16 +343,16 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({
           >
             <div className="flex items-center gap-2 text-neutral-500 dark:text-neutral-400">
               <span className="material-symbols-outlined text-lg">accessibility_new</span>
-              <span className="text-sm font-medium">Height</span>
+              <span className="text-sm font-medium">{t('height')}</span>
             </div>
             <div>
               <div className="text-2xl font-extrabold text-neutral-900 dark:text-white">
                 {user.height ? user.height : '--'} <span className="text-base font-semibold text-neutral-500">cm</span>
               </div>
               {user.age ? (
-                  <p className="text-xs text-neutral-400 mt-2 font-medium">Age: {user.age} yrs</p>
+                  <p className="text-xs text-neutral-400 mt-2 font-medium">{t('age')}: {user.age}</p>
               ) : (
-                  <p className="text-xs text-neutral-400 mt-2 font-medium">Age: --</p>
+                  <p className="text-xs text-neutral-400 mt-2 font-medium">{t('age')}: --</p>
               )}
             </div>
           </div>
@@ -362,7 +364,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 text-neutral-700 dark:text-neutral-300">
                     <span className="material-symbols-outlined text-lg filled">local_fire_department</span>
-                    <span className="text-sm font-bold">Daily Targets</span>
+                    <span className="text-sm font-bold">{t('daily_targets')}</span>
                 </div>
                 <div className="size-8 rounded-full bg-accent/30 flex items-center justify-center">
                     <span className="material-symbols-outlined text-accent-cream dark:text-accent text-sm">flag</span>
@@ -371,7 +373,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({
             
             <div className="flex justify-between items-end">
                 <div className="flex flex-col">
-                    <span className="text-xs font-semibold text-neutral-500 mb-0.5">Calories</span>
+                    <span className="text-xs font-semibold text-neutral-500 mb-0.5">{t('total_calories')}</span>
                     <div className="text-xl font-extrabold text-neutral-900 dark:text-white">
                         {user.dailyCalories ? user.dailyCalories : '2000'} <span className="text-sm font-semibold text-neutral-600 dark:text-neutral-400">kcal</span>
                     </div>
@@ -379,13 +381,13 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({
                 
                 <div className="flex gap-4">
                     <div className="flex flex-col items-end">
-                        <span className="text-xs font-semibold text-neutral-500 mb-0.5">Protein</span>
+                        <span className="text-xs font-semibold text-neutral-500 mb-0.5">{t('protein')}</span>
                         <div className="text-lg font-bold text-neutral-800 dark:text-white">
                             {user.dailyProtein || Math.round((user.dailyCalories || 2000) * 0.30 / 4)}g
                         </div>
                     </div>
                     <div className="flex flex-col items-end">
-                        <span className="text-xs font-semibold text-neutral-500 mb-0.5">Sugar (Max)</span>
+                        <span className="text-xs font-semibold text-neutral-500 mb-0.5">{t('max_sugar')}</span>
                         <div className="text-lg font-bold text-neutral-800 dark:text-white">
                             {user.dailySugar || 50}g
                         </div>
@@ -399,7 +401,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({
       {/* Consistency Calendar Section */}
       <section className="px-6 py-2 animate-enter" style={{animationDelay: '0.2s'}}>
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-neutral-900 dark:text-white text-lg font-bold">Consistency</h2>
+          <h2 className="text-neutral-900 dark:text-white text-lg font-bold">{t('consistency')}</h2>
         </div>
         <div className="bg-surface-light dark:bg-surface-dark rounded-3xl p-5 shadow-card">
           <div className="grid grid-cols-7 mb-2">
@@ -430,7 +432,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({
       </section>
 
       {/* Settings Bottom Sheet Integration */}
-      {isSettingsOpen && <SettingsSheet theme={theme} setTheme={setTheme} onClose={toggleSettings} onLogout={onLogout} isLoggedIn={true} />}
+      {isSettingsOpen && <SettingsSheet theme={theme} setTheme={setTheme} language={language} setLanguage={setLanguage} onClose={toggleSettings} onLogout={onLogout} isLoggedIn={true} />}
 
       {/* Edit Profile Sheet */}
       {isEditProfileOpen && (
@@ -454,40 +456,78 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({
 interface SettingsSheetProps {
   theme: Theme;
   setTheme: (t: Theme) => void;
+  language: Language;
+  setLanguage: (l: Language) => void;
   onClose: () => void;
   onLogout: () => void;
   isLoggedIn: boolean;
 }
 
-const SettingsSheet: React.FC<SettingsSheetProps> = ({ theme, setTheme, onClose, onLogout, isLoggedIn }) => (
+const SettingsSheet: React.FC<SettingsSheetProps> = ({ theme, setTheme, language, setLanguage, onClose, onLogout, isLoggedIn }) => {
+  const { t } = useLanguage();
+  return (
   <div className="fixed inset-0 z-[100] flex flex-col justify-end">
     <div className="absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity" onClick={onClose}></div>
     <div className="relative bg-white dark:bg-background-dark rounded-t-3xl p-6 shadow-2xl animate-enter border-t border-neutral-100 dark:border-neutral-800 max-w-md mx-auto w-full">
       <div className="flex items-center justify-between mb-6">
-         <h2 className="text-xl font-bold text-neutral-900 dark:text-white">Settings</h2>
+         <h2 className="text-xl font-bold text-neutral-900 dark:text-white">{t('settings')}</h2>
          <button onClick={onClose} className="p-2 -mr-2 text-neutral-500">
             <span className="material-symbols-outlined">close</span>
          </button>
       </div>
       <div className="space-y-6">
+        
+        {/* Language Section */}
         <div>
-          <h3 className="text-sm font-semibold text-neutral-500 uppercase tracking-wider mb-3">Appearance</h3>
+          <h3 className="text-sm font-semibold text-neutral-500 uppercase tracking-wider mb-3">{t('language')}</h3>
           <div className="bg-surface-light dark:bg-surface-dark rounded-2xl p-2 space-y-1">
-            {['system', 'light', 'dark'].map((t) => (
+            <button 
+                onClick={() => setLanguage('en')}
+                className={`w-full flex items-center justify-between p-3 rounded-xl transition-colors ${language === 'en' ? 'bg-white dark:bg-neutral-800 shadow-sm' : 'hover:bg-white/50 dark:hover:bg-neutral-800/50'}`}
+            >
+                <div className="flex items-center gap-3">
+                  <div className={`size-8 rounded-full flex items-center justify-center ${language === 'en' ? 'bg-primary text-white' : 'bg-neutral-200 dark:bg-neutral-700 text-neutral-500 dark:text-neutral-400'}`}>
+                     <span className="text-xs font-bold">EN</span>
+                  </div>
+                  <span className="font-medium text-neutral-900 dark:text-white">English</span>
+                </div>
+                {language === 'en' && <span className="material-symbols-outlined text-primary">check_circle</span>}
+            </button>
+            <button 
+                onClick={() => setLanguage('zh')}
+                className={`w-full flex items-center justify-between p-3 rounded-xl transition-colors ${language === 'zh' ? 'bg-white dark:bg-neutral-800 shadow-sm' : 'hover:bg-white/50 dark:hover:bg-neutral-800/50'}`}
+            >
+                <div className="flex items-center gap-3">
+                  <div className={`size-8 rounded-full flex items-center justify-center ${language === 'zh' ? 'bg-primary text-white' : 'bg-neutral-200 dark:bg-neutral-700 text-neutral-500 dark:text-neutral-400'}`}>
+                     <span className="text-xs font-bold">ZH</span>
+                  </div>
+                  <span className="font-medium text-neutral-900 dark:text-white">中文</span>
+                </div>
+                {language === 'zh' && <span className="material-symbols-outlined text-primary">check_circle</span>}
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <h3 className="text-sm font-semibold text-neutral-500 uppercase tracking-wider mb-3">{t('appearance')}</h3>
+          <div className="bg-surface-light dark:bg-surface-dark rounded-2xl p-2 space-y-1">
+            {['system', 'light', 'dark'].map((tVal) => (
               <button 
-                key={t}
-                onClick={() => setTheme(t as Theme)}
-                className={`w-full flex items-center justify-between p-3 rounded-xl transition-colors ${theme === t ? 'bg-white dark:bg-neutral-800 shadow-sm' : 'hover:bg-white/50 dark:hover:bg-neutral-800/50'}`}
+                key={tVal}
+                onClick={() => setTheme(tVal as Theme)}
+                className={`w-full flex items-center justify-between p-3 rounded-xl transition-colors ${theme === tVal ? 'bg-white dark:bg-neutral-800 shadow-sm' : 'hover:bg-white/50 dark:hover:bg-neutral-800/50'}`}
               >
                 <div className="flex items-center gap-3">
-                  <div className={`size-8 rounded-full flex items-center justify-center ${theme === t ? 'bg-primary text-white' : 'bg-neutral-200 dark:bg-neutral-700 text-neutral-500 dark:text-neutral-400'}`}>
+                  <div className={`size-8 rounded-full flex items-center justify-center ${theme === tVal ? 'bg-primary text-white' : 'bg-neutral-200 dark:bg-neutral-700 text-neutral-500 dark:text-neutral-400'}`}>
                      <span className="material-symbols-outlined text-lg">
-                        {t === 'system' ? 'settings_brightness' : t === 'light' ? 'light_mode' : 'dark_mode'}
+                        {tVal === 'system' ? 'settings_brightness' : tVal === 'light' ? 'light_mode' : 'dark_mode'}
                      </span>
                   </div>
-                  <span className="font-medium text-neutral-900 dark:text-white capitalize">{t === 'system' ? 'Automatic (System)' : `${t} Mode`}</span>
+                  <span className="font-medium text-neutral-900 dark:text-white capitalize">
+                    {tVal === 'system' ? `${t('appearance')} (Auto)` : `${tVal} Mode`}
+                  </span>
                 </div>
-                {theme === t && <span className="material-symbols-outlined text-primary">check_circle</span>}
+                {theme === tVal && <span className="material-symbols-outlined text-primary">check_circle</span>}
               </button>
             ))}
           </div>
@@ -500,18 +540,18 @@ const SettingsSheet: React.FC<SettingsSheetProps> = ({ theme, setTheme, onClose,
               className="w-full flex items-center gap-3 p-4 rounded-2xl text-red-500 bg-red-50 dark:bg-red-900/10 font-bold hover:bg-red-100 transition-colors"
             >
               <span className="material-symbols-outlined">logout</span>
-              Sign Out
+              {t('sign_out')}
             </button>
           </div>
         )}
 
         <div className="pt-2 text-center">
-           <p className="text-xs text-neutral-400">NutriSnap v1.0.3</p>
+           <p className="text-xs text-neutral-400">NutriSnap v1.1.0</p>
         </div>
       </div>
     </div>
   </div>
-);
+)};
 
 // ------------------------------------------------------------------
 // CALCULATOR FORMULAS
@@ -599,6 +639,7 @@ interface EditProfileSheetProps {
 }
 
 const EditProfileSheet: React.FC<EditProfileSheetProps> = ({ user, onClose, onSave }) => {
+    const { t } = useLanguage();
     const [weight, setWeight] = useState(user.weight?.toString() || '');
     const [height, setHeight] = useState(user.height?.toString() || '');
     const [age, setAge] = useState(user.age?.toString() || '');
@@ -664,7 +705,7 @@ const EditProfileSheet: React.FC<EditProfileSheetProps> = ({ user, onClose, onSa
             <div className="absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity" onClick={onClose}></div>
             <div className="relative bg-white dark:bg-background-dark rounded-t-3xl p-6 shadow-2xl animate-enter border-t border-neutral-100 dark:border-neutral-800 max-w-md mx-auto w-full max-h-[90vh] overflow-y-auto">
                 <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-xl font-bold text-neutral-900 dark:text-white">Edit Profile</h2>
+                    <h2 className="text-xl font-bold text-neutral-900 dark:text-white">{t('edit')}</h2>
                     <button onClick={onClose} className="p-2 -mr-2 text-neutral-500">
                         <span className="material-symbols-outlined">close</span>
                     </button>
@@ -679,26 +720,26 @@ const EditProfileSheet: React.FC<EditProfileSheetProps> = ({ user, onClose, onSa
                                 onClick={() => setGender('male')}
                                 className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${gender === 'male' ? 'bg-primary text-white shadow-sm' : 'text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200'}`}
                             >
-                                Male
+                                {t('male')}
                             </button>
                             <button 
                                 onClick={() => setGender('female')}
                                 className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${gender === 'female' ? 'bg-primary text-white shadow-sm' : 'text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200'}`}
                             >
-                                Female
+                                {t('female')}
                             </button>
                          </div>
 
                          {/* Goal Selector */}
                          <div className="space-y-2">
-                            <label className="text-xs font-bold uppercase tracking-wider text-neutral-400 ml-1">Current Goal</label>
+                            <label className="text-xs font-bold uppercase tracking-wider text-neutral-400 ml-1">{t('current_goal')}</label>
                             <div className="grid grid-cols-1 gap-2">
                                 <button 
                                     onClick={() => setGoal('LOSS_WEIGHT')}
                                     className={`px-4 py-3 rounded-xl border text-left flex items-center gap-3 transition-all ${goal === 'LOSS_WEIGHT' ? 'border-primary bg-primary/5 text-primary-dark dark:text-primary' : 'border-transparent bg-white dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300'}`}
                                 >
                                     <span className="material-symbols-outlined">trending_down</span>
-                                    <span className="font-bold text-sm">Lose Weight</span>
+                                    <span className="font-bold text-sm">{t('goal_lose')}</span>
                                     {goal === 'LOSS_WEIGHT' && <span className="material-symbols-outlined ml-auto text-primary">check</span>}
                                 </button>
                                 <button 
@@ -706,7 +747,7 @@ const EditProfileSheet: React.FC<EditProfileSheetProps> = ({ user, onClose, onSa
                                     className={`px-4 py-3 rounded-xl border text-left flex items-center gap-3 transition-all ${goal === 'GAIN_MUSCLE' ? 'border-primary bg-primary/5 text-primary-dark dark:text-primary' : 'border-transparent bg-white dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300'}`}
                                 >
                                     <span className="material-symbols-outlined">fitness_center</span>
-                                    <span className="font-bold text-sm">Build Muscle</span>
+                                    <span className="font-bold text-sm">{t('goal_muscle')}</span>
                                     {goal === 'GAIN_MUSCLE' && <span className="material-symbols-outlined ml-auto text-primary">check</span>}
                                 </button>
                                 <button 
@@ -714,7 +755,7 @@ const EditProfileSheet: React.FC<EditProfileSheetProps> = ({ user, onClose, onSa
                                     className={`px-4 py-3 rounded-xl border text-left flex items-center gap-3 transition-all ${goal === 'GAIN_WEIGHT' ? 'border-primary bg-primary/5 text-primary-dark dark:text-primary' : 'border-transparent bg-white dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300'}`}
                                 >
                                     <span className="material-symbols-outlined">trending_up</span>
-                                    <span className="font-bold text-sm">Gain Weight</span>
+                                    <span className="font-bold text-sm">{t('goal_gain')}</span>
                                     {goal === 'GAIN_WEIGHT' && <span className="material-symbols-outlined ml-auto text-primary">check</span>}
                                 </button>
                             </div>
@@ -724,7 +765,7 @@ const EditProfileSheet: React.FC<EditProfileSheetProps> = ({ user, onClose, onSa
                     {/* Stats Input */}
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                            <label className="text-xs font-bold uppercase tracking-wider text-neutral-400 ml-1">Weight (kg)</label>
+                            <label className="text-xs font-bold uppercase tracking-wider text-neutral-400 ml-1">{t('weight')} (kg)</label>
                             <input 
                                 type="number" 
                                 value={weight}
@@ -734,7 +775,7 @@ const EditProfileSheet: React.FC<EditProfileSheetProps> = ({ user, onClose, onSa
                             />
                         </div>
                         <div className="space-y-2">
-                            <label className="text-xs font-bold uppercase tracking-wider text-neutral-400 ml-1">Height (cm)</label>
+                            <label className="text-xs font-bold uppercase tracking-wider text-neutral-400 ml-1">{t('height')} (cm)</label>
                             <input 
                                 type="number" 
                                 value={height}
@@ -744,7 +785,7 @@ const EditProfileSheet: React.FC<EditProfileSheetProps> = ({ user, onClose, onSa
                             />
                         </div>
                         <div className="space-y-2 col-span-2">
-                            <label className="text-xs font-bold uppercase tracking-wider text-neutral-400 ml-1">Age (Years)</label>
+                            <label className="text-xs font-bold uppercase tracking-wider text-neutral-400 ml-1">{t('age')}</label>
                             <input 
                                 type="number" 
                                 value={age}
@@ -762,18 +803,18 @@ const EditProfileSheet: React.FC<EditProfileSheetProps> = ({ user, onClose, onSa
                         className="w-full py-3 rounded-xl border-2 border-dashed border-primary/30 text-primary font-bold hover:bg-primary/5 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
                     >
                         <span className="material-symbols-outlined">calculate</span>
-                        Recalculate Nutrition Targets
+                        {t('recalculate')}
                     </button>
 
                     {/* Results Section */}
                     <div className="space-y-4">
                         <div className="flex items-center gap-2 mb-2">
-                            <span className="text-sm font-bold text-neutral-900 dark:text-white">Daily Targets</span>
+                            <span className="text-sm font-bold text-neutral-900 dark:text-white">{t('daily_targets')}</span>
                             <div className="h-px bg-neutral-200 dark:bg-neutral-700 flex-1"></div>
                         </div>
 
                         <div className="space-y-2">
-                            <label className="text-xs font-bold uppercase tracking-wider text-neutral-400 ml-1">Calories</label>
+                            <label className="text-xs font-bold uppercase tracking-wider text-neutral-400 ml-1">{t('total_calories')}</label>
                             <input 
                                 type="number" 
                                 value={calories}
@@ -784,7 +825,7 @@ const EditProfileSheet: React.FC<EditProfileSheetProps> = ({ user, onClose, onSa
 
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <label className="text-xs font-bold uppercase tracking-wider text-neutral-400 ml-1">Protein (g)</label>
+                                <label className="text-xs font-bold uppercase tracking-wider text-neutral-400 ml-1">{t('protein')} (g)</label>
                                 <input 
                                     type="number" 
                                     value={protein}
@@ -793,7 +834,7 @@ const EditProfileSheet: React.FC<EditProfileSheetProps> = ({ user, onClose, onSa
                                 />
                             </div>
                             <div className="space-y-2">
-                                <label className="text-xs font-bold uppercase tracking-wider text-neutral-400 ml-1">Max Sugar (g)</label>
+                                <label className="text-xs font-bold uppercase tracking-wider text-neutral-400 ml-1">{t('max_sugar')} (g)</label>
                                 <input 
                                     type="number" 
                                     value={sugar}
@@ -809,7 +850,7 @@ const EditProfileSheet: React.FC<EditProfileSheetProps> = ({ user, onClose, onSa
                             onClick={handleSave}
                             className="w-full h-14 bg-primary text-white font-bold rounded-2xl shadow-float hover:bg-primary-dark transition-all active:scale-[0.98]"
                         >
-                            Save Changes
+                            {t('save_changes')}
                         </button>
                     </div>
                 </div>

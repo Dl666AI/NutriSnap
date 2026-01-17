@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Screen, User, Meal } from './types';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { DataProvider, useData } from './contexts/DataContext';
+import { LanguageProvider } from './contexts/LanguageContext';
 import SplashScreen from './components/SplashScreen';
 import HomeScreen from './components/HomeScreen';
 import CameraScreen from './components/CameraScreen';
@@ -214,30 +215,32 @@ const App: React.FC = () => {
 
   return (
     <ThemeProvider>
-      {/* 
-        Key Principle for Data Isolation:
-        By passing `key={user?.id || 'guest'}` to the DataProvider, we force React 
-        to completely destroy and recreate the provider when the user changes.
-        This ensures:
-        1. No stale state from the previous user leaks into the new session.
-        2. The initialization logic in DataProvider runs fresh for the new user ID.
-      */}
-      <DataProvider 
-        userId={user?.id || null} 
-        targetCalories={user?.dailyCalories} 
-        customTargets={{
-          protein: user?.dailyProtein,
-          sugar: user?.dailySugar
-        }}
-        key={user?.id || 'guest'}
-      >
-        <AppContent 
-            user={user} 
-            onLogin={handleLogin} 
-            onLogout={handleLogout} 
-            onUpdateUser={handleUpdateUser} 
-        />
-      </DataProvider>
+      <LanguageProvider>
+        {/* 
+          Key Principle for Data Isolation:
+          By passing `key={user?.id || 'guest'}` to the DataProvider, we force React 
+          to completely destroy and recreate the provider when the user changes.
+          This ensures:
+          1. No stale state from the previous user leaks into the new session.
+          2. The initialization logic in DataProvider runs fresh for the new user ID.
+        */}
+        <DataProvider 
+          userId={user?.id || null} 
+          targetCalories={user?.dailyCalories} 
+          customTargets={{
+            protein: user?.dailyProtein,
+            sugar: user?.dailySugar
+          }}
+          key={user?.id || 'guest'}
+        >
+          <AppContent 
+              user={user} 
+              onLogin={handleLogin} 
+              onLogout={handleLogout} 
+              onUpdateUser={handleUpdateUser} 
+          />
+        </DataProvider>
+      </LanguageProvider>
     </ThemeProvider>
   );
 };

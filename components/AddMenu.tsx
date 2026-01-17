@@ -1,4 +1,5 @@
 import React from 'react';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface AddMenuProps {
   onClose: () => void;
@@ -6,6 +7,8 @@ interface AddMenuProps {
 }
 
 const AddMenu: React.FC<AddMenuProps> = ({ onClose, onSelectOption }) => {
+  const { t } = useLanguage();
+  
   return (
     <div className="fixed inset-0 z-[100] flex flex-col justify-end font-display">
       {/* Backdrop */}
@@ -23,8 +26,8 @@ const AddMenu: React.FC<AddMenuProps> = ({ onClose, onSelectOption }) => {
         </div>
 
         <div className="mb-8 px-2">
-            <h2 className="text-2xl font-bold text-neutral-900 dark:text-white mb-2">Log Meal</h2>
-            <p className="text-neutral-500 dark:text-neutral-400 text-sm">Choose how you want to add your food</p>
+            <h2 className="text-2xl font-bold text-neutral-900 dark:text-white mb-2">{t('log_meal')}</h2>
+            <p className="text-neutral-500 dark:text-neutral-400 text-sm">{t('choose_method')}</p>
         </div>
 
         <div className="grid gap-4">
@@ -37,8 +40,8 @@ const AddMenu: React.FC<AddMenuProps> = ({ onClose, onSelectOption }) => {
                     <span className="material-symbols-outlined text-3xl">photo_camera</span>
                 </div>
                 <div className="flex flex-col items-start">
-                    <span className="text-lg font-bold text-neutral-900 dark:text-white group-hover:text-primary transition-colors">Scan Meal</span>
-                    <span className="text-sm text-neutral-500 dark:text-neutral-400">Snap a photo to track automatically</span>
+                    <span className="text-lg font-bold text-neutral-900 dark:text-white group-hover:text-primary transition-colors">{t('scan_meal')}</span>
+                    <span className="text-sm text-neutral-500 dark:text-neutral-400">{t('scan_hint')}</span>
                 </div>
                 <span className="material-symbols-outlined ml-auto text-neutral-300 group-hover:text-primary transition-colors">chevron_right</span>
             </button>
@@ -52,8 +55,8 @@ const AddMenu: React.FC<AddMenuProps> = ({ onClose, onSelectOption }) => {
                     <span className="material-symbols-outlined text-3xl">image</span>
                 </div>
                 <div className="flex flex-col items-start">
-                    <span className="text-lg font-bold text-neutral-900 dark:text-white group-hover:text-accent transition-colors">Upload Photo</span>
-                    <span className="text-sm text-neutral-500 dark:text-neutral-400">Select from your gallery</span>
+                    <span className="text-lg font-bold text-neutral-900 dark:text-white group-hover:text-accent transition-colors">{t('upload_photo')}</span>
+                    <span className="text-sm text-neutral-500 dark:text-neutral-400">{t('upload_hint')}</span>
                 </div>
                 <span className="material-symbols-outlined ml-auto text-neutral-300 group-hover:text-accent transition-colors">chevron_right</span>
             </button>
@@ -67,8 +70,8 @@ const AddMenu: React.FC<AddMenuProps> = ({ onClose, onSelectOption }) => {
                     <span className="material-symbols-outlined text-3xl">edit_note</span>
                 </div>
                 <div className="flex flex-col items-start">
-                    <span className="text-lg font-bold text-neutral-900 dark:text-white">Manual Entry</span>
-                    <span className="text-sm text-neutral-500 dark:text-neutral-400">Type details manually</span>
+                    <span className="text-lg font-bold text-neutral-900 dark:text-white">{t('manual_entry')}</span>
+                    <span className="text-sm text-neutral-500 dark:text-neutral-400">{t('manual_hint')}</span>
                 </div>
                 <span className="material-symbols-outlined ml-auto text-neutral-300">chevron_right</span>
             </button>

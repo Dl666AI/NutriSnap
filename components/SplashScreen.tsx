@@ -1,10 +1,13 @@
 import React, { useEffect } from 'react';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface SplashScreenProps {
   onComplete: () => void;
 }
 
 const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete }) => {
+  const { t } = useLanguage();
+
   useEffect(() => {
     const timer = setTimeout(() => {
       onComplete();
@@ -49,10 +52,10 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete }) => {
         {/* Brand Typography */}
         <div className="text-center animate-enter flex flex-col items-center">
           <h1 className="text-5xl font-extrabold tracking-tight text-white drop-shadow-md mb-2">
-            NutriSnap
+            {t('app_name')}
           </h1>
           <p className="text-white/90 text-lg font-medium tracking-wide bg-primary-dark/10 px-4 py-1 rounded-full border border-white/10 backdrop-blur-sm">
-            Eat Fresh. Track Smart.
+            {t('splash_subtitle')}
           </p>
         </div>
       </div>
@@ -61,7 +64,7 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete }) => {
       <div className="relative z-10 pb-12 w-full flex flex-col items-center justify-end h-24">
         <div className="w-6 h-6 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
         <p className="mt-4 text-[10px] font-semibold tracking-widest uppercase text-white/40">
-           Version 1.0
+           {t('version')} 1.1
         </p>
       </div>
     </div>

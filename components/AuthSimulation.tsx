@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { User } from '../types';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface AuthSimulationProps {
   provider: 'google' | 'apple';
@@ -8,6 +9,7 @@ interface AuthSimulationProps {
 }
 
 const AuthSimulation: React.FC<AuthSimulationProps> = ({ provider, onSuccess, onCancel }) => {
+  const { t } = useLanguage();
   const [step, setStep] = useState<'PICKER' | 'LOADING' | 'SUCCESS'>('PICKER');
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
 
@@ -79,8 +81,8 @@ const AuthSimulation: React.FC<AuthSimulationProps> = ({ provider, onSuccess, on
               )}
             </div>
 
-            <h3 className="text-xl font-bold text-neutral-900 dark:text-white mb-1">Choose an account</h3>
-            <p className="text-sm text-neutral-500 mb-8">to continue to NutriSnap</p>
+            <h3 className="text-xl font-bold text-neutral-900 dark:text-white mb-1">{t('choose_account')}</h3>
+            <p className="text-sm text-neutral-500 mb-8">{t('continue_to')}</p>
 
             <div className="w-full space-y-3">
               {mockUsers[provider].map((u) => (
@@ -102,13 +104,13 @@ const AuthSimulation: React.FC<AuthSimulationProps> = ({ provider, onSuccess, on
                 <div className="size-10 rounded-full bg-neutral-100 dark:bg-neutral-700 flex items-center justify-center">
                   <span className="material-symbols-outlined">person_add</span>
                 </div>
-                <span className="text-sm font-semibold">Use another account</span>
+                <span className="text-sm font-semibold">{t('use_another')}</span>
               </button>
             </div>
 
             <div className="mt-8 pt-6 border-t border-neutral-100 dark:border-neutral-800 w-full flex justify-center">
               <button onClick={onCancel} className="text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 text-sm font-bold py-2 px-4">
-                Cancel
+                {t('cancel')}
               </button>
             </div>
           </div>
@@ -117,7 +119,7 @@ const AuthSimulation: React.FC<AuthSimulationProps> = ({ provider, onSuccess, on
         {step === 'LOADING' && (
           <div className="p-12 flex flex-col items-center justify-center min-h-[300px]">
             <div className="size-14 border-4 border-primary/20 border-t-primary rounded-full animate-spin mb-6"></div>
-            <p className="font-bold text-neutral-800 dark:text-white">Signing in...</p>
+            <p className="font-bold text-neutral-800 dark:text-white">{t('signing_in')}</p>
           </div>
         )}
 
@@ -126,7 +128,7 @@ const AuthSimulation: React.FC<AuthSimulationProps> = ({ provider, onSuccess, on
             <div className="size-16 bg-primary rounded-full flex items-center justify-center mb-6 shadow-glow">
               <span className="material-symbols-outlined text-white text-3xl">check</span>
             </div>
-            <p className="font-bold text-neutral-800 dark:text-white text-xl">Welcome back!</p>
+            <p className="font-bold text-neutral-800 dark:text-white text-xl">{t('welcome_back')}</p>
             <p className="text-neutral-500 text-sm mt-1">{selectedUser?.name}</p>
           </div>
         )}

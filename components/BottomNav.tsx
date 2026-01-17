@@ -1,5 +1,6 @@
 import React from 'react';
 import { Screen } from '../types';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface BottomNavProps {
   currentScreen: Screen;
@@ -8,6 +9,8 @@ interface BottomNavProps {
 }
 
 const BottomNav: React.FC<BottomNavProps> = ({ currentScreen, onNavigate, onCameraClick }) => {
+  const { t } = useLanguage();
+
   const getIconClass = (screen: Screen) => {
     return currentScreen === screen 
       ? "text-primary dark:text-primary filled" 
@@ -41,14 +44,14 @@ const BottomNav: React.FC<BottomNavProps> = ({ currentScreen, onNavigate, onCame
               className={`flex flex-col items-center gap-1 ${getIconClass('HOME')}`}
             >
               <span className={`material-symbols-outlined text-[26px] ${currentScreen === 'HOME' ? 'filled' : ''}`}>home</span>
-              <span className={`text-[10px] font-medium ${getLabelClass('HOME')}`}>Home</span>
+              <span className={`text-[10px] font-medium ${getLabelClass('HOME')}`}>{t('nav_home')}</span>
             </button>
             <button 
               onClick={() => onNavigate('DIARY')}
               className={`flex flex-col items-center gap-1 ${getIconClass('DIARY')}`}
             >
               <span className={`material-symbols-outlined text-[26px] ${currentScreen === 'DIARY' ? 'filled' : ''}`}>book</span>
-              <span className={`text-[10px] font-medium ${getLabelClass('DIARY')}`}>Diary</span>
+              <span className={`text-[10px] font-medium ${getLabelClass('DIARY')}`}>{t('nav_diary')}</span>
             </button>
           </div>
 
@@ -62,14 +65,14 @@ const BottomNav: React.FC<BottomNavProps> = ({ currentScreen, onNavigate, onCame
               className={`flex flex-col items-center gap-1 ${getIconClass('INSIGHTS')}`}
             >
               <span className={`material-symbols-outlined text-[26px] ${currentScreen === 'INSIGHTS' ? 'filled' : ''}`}>bar_chart</span>
-              <span className={`text-[10px] font-medium ${getLabelClass('INSIGHTS')}`}>Insights</span>
+              <span className={`text-[10px] font-medium ${getLabelClass('INSIGHTS')}`}>{t('nav_insights')}</span>
             </button>
             <button 
                onClick={() => onNavigate('PROFILE')}
                className={`flex flex-col items-center gap-1 ${getIconClass('PROFILE')}`}
             >
               <span className={`material-symbols-outlined text-[26px] ${currentScreen === 'PROFILE' ? 'filled' : ''}`}>person</span>
-              <span className={`text-[10px] font-medium ${getLabelClass('PROFILE')}`}>Profile</span>
+              <span className={`text-[10px] font-medium ${getLabelClass('PROFILE')}`}>{t('nav_profile')}</span>
             </button>
           </div>
         </div>

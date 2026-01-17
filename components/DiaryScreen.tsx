@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Screen, Meal } from '../types';
 import { useData } from '../contexts/DataContext';
+import { useLanguage } from '../contexts/LanguageContext';
 import BottomNav from './BottomNav';
 
 interface DiaryScreenProps {
@@ -12,6 +13,7 @@ interface DiaryScreenProps {
 
 const DiaryScreen: React.FC<DiaryScreenProps> = ({ onNavigate, onEdit, onAddMeal, onFabClick }) => {
   const { meals, targets, removeMeal, getTodayString } = useData();
+  const { t } = useLanguage();
   
   // State for current selected date (Data View)
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
@@ -82,12 +84,12 @@ const DiaryScreen: React.FC<DiaryScreenProps> = ({ onNavigate, onEdit, onAddMeal
   };
 
   const formatDisplayDate = (d: Date) => {
-    if (formatDateForComparison(d) === todayStr) return "Today";
+    if (formatDateForComparison(d) === todayStr) return t('today');
     
     // Check if yesterday
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
-    if (formatDateForComparison(d) === formatDateForComparison(yesterday)) return "Yesterday";
+    if (formatDateForComparison(d) === formatDateForComparison(yesterday)) return t('yesterday');
 
     return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
   };
@@ -118,15 +120,17 @@ const DiaryScreen: React.FC<DiaryScreenProps> = ({ onNavigate, onEdit, onAddMeal
 
   // --- Renderers ---
 
-  const renderMealSection = (title: string, sectionMeals: Meal[]) => {
+  const renderMealSection = (titleKey: string, sectionMeals: Meal[]) => {
     const sectionCals = getSectionCalories(sectionMeals);
+    // @ts-ignore
+    const displayTitle = t(titleKey.toLowerCase());
     
     if (sectionMeals.length === 0) {
       return (
         <section className="opacity-50">
           <div className="flex items-center justify-between mb-3">
              <h3 className="text-lg font-bold text-neutral-800 dark:text-white flex items-center gap-2">
-               {title}
+               {displayTitle}
                <span className="text-xs font-normal text-neutral-400 bg-neutral-100 dark:bg-neutral-800 px-2 py-0.5 rounded-md">0 kcal</span>
              </h3>
              <button onClick={() => onAddMeal(selectedDateStr)} className="text-primary hover:bg-primary/10 p-1 rounded-full transition-colors">
@@ -134,7 +138,7 @@ const DiaryScreen: React.FC<DiaryScreenProps> = ({ onNavigate, onEdit, onAddMeal
              </button>
           </div>
           <div className="border-2 border-dashed border-neutral-200 dark:border-neutral-700 rounded-xl p-4 flex flex-col items-center justify-center text-center">
-            <p className="text-xs text-neutral-400">No {title.toLowerCase()} logged</p>
+            <p className="text-xs text-neutral-400">{t('no_log_prefix')} {displayTitle.toLowerCase()} {t('no_log_suffix')}</p>
           </div>
         </section>
       );
@@ -144,7 +148,7 @@ const DiaryScreen: React.FC<DiaryScreenProps> = ({ onNavigate, onEdit, onAddMeal
       <section>
         <div className="flex items-center justify-between mb-3">
            <h3 className="text-lg font-bold text-neutral-800 dark:text-white flex items-center gap-2">
-             {title}
+             {displayTitle}
              <span className="text-xs font-normal text-neutral-400 bg-neutral-100 dark:bg-neutral-800 px-2 py-0.5 rounded-md">{sectionCals} kcal</span>
            </h3>
            <button onClick={() => onAddMeal(selectedDateStr)} className="text-primary hover:bg-primary/10 p-1 rounded-full transition-colors">
@@ -190,7 +194,7 @@ const DiaryScreen: React.FC<DiaryScreenProps> = ({ onNavigate, onEdit, onAddMeal
       {/* --- Sticky Header with Date Navigation --- */}
       <header className="flex flex-col px-6 pt-8 pb-4 sticky top-0 z-30 bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-md">
         <div className="flex items-center justify-between mb-4">
-          <h1 className="text-2xl font-extrabold text-neutral-900 dark:text-white">Food Diary</h1>
+          <h1 className="text-2xl font-extrabold text-neutral-900 dark:text-white">{t('food_diary')}</h1>
         </div>
         
         {/* Date Navigator Bar */}
@@ -305,11 +309,11 @@ const DiaryScreen: React.FC<DiaryScreenProps> = ({ onNavigate, onEdit, onAddMeal
         <div className="bg-neutral-900 dark:bg-white rounded-3xl p-5 text-white dark:text-neutral-900 shadow-soft">
           <div className="flex justify-between items-end mb-4">
              <div>
-               <p className="text-xs font-medium opacity-70 uppercase tracking-wider mb-1">Total Calories</p>
+               <p className="text-xs font-medium opacity-70 uppercase tracking-wider mb-1">{t('total_calories')}</p>
                <div className="text-3xl font-extrabold">{dayTotals.calories}</div>
              </div>
              <div className="text-right">
-               <p className="text-xs font-medium opacity-70 mb-1">Remaining</p>
+               <p className="text-xs font-medium opacity-70 mb-1">{t('remaining')}</p>
                <div className="text-xl font-bold text-primary">{caloriesLeft}</div>
              </div>
           </div>
@@ -321,10 +325,10 @@ const DiaryScreen: React.FC<DiaryScreenProps> = ({ onNavigate, onEdit, onAddMeal
 
       {/* --- Meal Sections --- */}
       <main className="flex flex-col px-6 gap-8 animate-enter">
-        {renderMealSection('Breakfast', breakfastMeals)}
-        {renderMealSection('Lunch', lunchMeals)}
-        {renderMealSection('Dinner', dinnerMeals)}
-        {renderMealSection('Snack', snackMeals)}
+        {renderMealSection('breakfast', breakfastMeals)}
+        {renderMealSection('lunch', lunchMeals)}
+        {renderMealSection('dinner', dinnerMeals)}
+        {renderMealSection('snack', snackMeals)}
         
         <div className="h-4"></div>
       </main>

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useData } from '../contexts/DataContext';
+import { useLanguage } from '../contexts/LanguageContext';
 import { Meal } from '../types';
 
 interface ManualEntryScreenProps {
@@ -11,6 +12,7 @@ interface ManualEntryScreenProps {
 
 const ManualEntryScreen: React.FC<ManualEntryScreenProps> = ({ onSave, onCancel, mealToEdit, targetDate }) => {
   const { addMeal, updateMeal, getTodayString } = useData();
+  const { t } = useLanguage();
   
   // Initialize state with mealToEdit values if available
   const [name, setName] = useState(mealToEdit?.name || '');
@@ -53,6 +55,8 @@ const ManualEntryScreen: React.FC<ManualEntryScreenProps> = ({ onSave, onCancel,
     onSave();
   };
 
+  const typeOptions: Meal['type'][] = ['Breakfast', 'Lunch', 'Dinner', 'Snack'];
+
   return (
     <div className="bg-background-light dark:bg-background-dark font-display text-text-dark antialiased overflow-x-hidden min-h-screen flex flex-col transition-colors duration-300">
       <header className="sticky top-0 z-50 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md">
@@ -64,7 +68,7 @@ const ManualEntryScreen: React.FC<ManualEntryScreenProps> = ({ onSave, onCancel,
             <span className="material-symbols-outlined text-2xl">close</span>
           </button>
           <h2 className="text-text-dark dark:text-white text-lg font-bold leading-tight tracking-[-0.015em]">
-            {mealToEdit ? 'Edit Meal' : 'Log Manually'}
+            {mealToEdit ? t('edit') : t('manual_entry')}
           </h2>
           <div className="w-10"></div>
         </div>
@@ -74,7 +78,7 @@ const ManualEntryScreen: React.FC<ManualEntryScreenProps> = ({ onSave, onCancel,
         <div className="space-y-6">
           {/* Meal Type Toggle */}
           <div className="flex gap-2 overflow-x-auto no-scrollbar pb-2">
-            {(['Breakfast', 'Lunch', 'Dinner', 'Snack'] as const).map((type) => (
+            {typeOptions.map((type) => (
               <button
                 key={type}
                 onClick={() => setMealType(type)}
@@ -84,17 +88,18 @@ const ManualEntryScreen: React.FC<ManualEntryScreenProps> = ({ onSave, onCancel,
                     : 'bg-surface-light dark:bg-surface-dark text-neutral-500'
                 }`}
               >
-                {type}
+                {/* @ts-ignore */}
+                {t(type.toLowerCase())}
               </button>
             ))}
           </div>
 
           {/* Name Input */}
           <div className="space-y-2">
-            <label className="text-xs font-bold uppercase tracking-wider text-neutral-400 ml-1">Meal Name</label>
+            <label className="text-xs font-bold uppercase tracking-wider text-neutral-400 ml-1">{t('meal_name')}</label>
             <input 
               type="text"
-              placeholder="e.g. Greek Yogurt Bowl"
+              placeholder={t('meal_placeholder')}
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="w-full h-14 px-4 rounded-2xl bg-surface-light dark:bg-surface-dark border-none focus:ring-2 focus:ring-primary/50 text-neutral-800 dark:text-white font-medium"
@@ -106,7 +111,7 @@ const ManualEntryScreen: React.FC<ManualEntryScreenProps> = ({ onSave, onCancel,
              <div className="space-y-2">
                 <label className="text-xs font-bold uppercase tracking-wider text-neutral-400 ml-1 flex items-center gap-1">
                   <span className="material-symbols-outlined text-sm filled text-primary">local_fire_department</span>
-                  Calories (kcal)
+                  {t('total_calories')} (kcal)
                 </label>
                 <input 
                   type="number"
@@ -120,7 +125,7 @@ const ManualEntryScreen: React.FC<ManualEntryScreenProps> = ({ onSave, onCancel,
 
              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-wider text-neutral-400 ml-1">Protein (g)</label>
+                  <label className="text-xs font-bold uppercase tracking-wider text-neutral-400 ml-1">{t('protein')} (g)</label>
                   <input 
                     type="number"
                     inputMode="numeric"
@@ -131,7 +136,7 @@ const ManualEntryScreen: React.FC<ManualEntryScreenProps> = ({ onSave, onCancel,
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-wider text-neutral-400 ml-1">Sugar (g)</label>
+                  <label className="text-xs font-bold uppercase tracking-wider text-neutral-400 ml-1">{t('sugar')} (g)</label>
                   <input 
                     type="number"
                     inputMode="numeric"
@@ -152,7 +157,7 @@ const ManualEntryScreen: React.FC<ManualEntryScreenProps> = ({ onSave, onCancel,
           className="w-full h-14 bg-primary text-white font-bold rounded-2xl shadow-float active:scale-[0.98] transition-all flex items-center justify-center gap-2"
         >
           <span className="material-symbols-outlined">{mealToEdit ? 'update' : 'save'}</span>
-          {mealToEdit ? 'Update Entry' : 'Save Entry'}
+          {mealToEdit ? t('update_entry') : t('save_entry')}
         </button>
       </div>
     </div>

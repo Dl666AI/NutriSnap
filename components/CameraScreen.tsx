@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { Screen } from '../types';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface CameraScreenProps {
   onCapture: (imageSrc?: string) => void;
@@ -9,6 +9,7 @@ interface CameraScreenProps {
 }
 
 const CameraScreen: React.FC<CameraScreenProps> = ({ onCapture, onCancel, onManualEntry, autoLaunchGallery = false }) => {
+  const { t } = useLanguage();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -30,7 +31,7 @@ const CameraScreen: React.FC<CameraScreenProps> = ({ onCapture, onCancel, onManu
         }
       } catch (err) {
         console.error("Camera access denied or error:", err);
-        setError("Unable to access camera. Please check permissions.");
+        setError(t('camera_error'));
       }
     }
 
@@ -49,7 +50,7 @@ const CameraScreen: React.FC<CameraScreenProps> = ({ onCapture, onCancel, onManu
         stream.getTracks().forEach(track => track.stop());
       }
     };
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleGalleryClick = () => {
     fileInputRef.current?.click();
@@ -110,7 +111,7 @@ const CameraScreen: React.FC<CameraScreenProps> = ({ onCapture, onCancel, onManu
               onClick={onManualEntry}
               className="mt-6 bg-white/10 hover:bg-white/20 px-6 py-3 rounded-xl border border-white/20 transition-colors"
             >
-              Use Manual Entry
+              {t('use_manual_entry')}
             </button>
           </div>
         ) : (
@@ -132,7 +133,7 @@ const CameraScreen: React.FC<CameraScreenProps> = ({ onCapture, onCancel, onManu
 
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/20 backdrop-blur-md border border-white/10">
           <div className="size-2 rounded-full bg-accent animate-pulse"></div>
-          <span className="text-white text-xs font-semibold tracking-wide uppercase">AI Vision Active</span>
+          <span className="text-white text-xs font-semibold tracking-wide uppercase">{t('ai_vision_active')}</span>
         </div>
 
         <button 
@@ -161,7 +162,7 @@ const CameraScreen: React.FC<CameraScreenProps> = ({ onCapture, onCancel, onManu
           )}
         </div>
         <div className="mt-8 bg-black/40 backdrop-blur-md px-5 py-2.5 rounded-xl border border-white/10">
-          <h3 className="text-white text-sm font-semibold tracking-wide text-center">Center your meal in the frame</h3>
+          <h3 className="text-white text-sm font-semibold tracking-wide text-center">{t('center_meal')}</h3>
         </div>
       </div>
 
@@ -206,7 +207,7 @@ const CameraScreen: React.FC<CameraScreenProps> = ({ onCapture, onCancel, onManu
             </button>
           </div>
           
-          <p className="text-neutral-500 dark:text-neutral-400 text-sm font-medium tracking-wide">Take a photo to track instantly</p>
+          <p className="text-neutral-500 dark:text-neutral-400 text-sm font-medium tracking-wide">{t('take_photo_hint')}</p>
         </div>
       </div>
     </div>

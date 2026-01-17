@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useData } from '../contexts/DataContext';
+import { useLanguage } from '../contexts/LanguageContext';
 import { Meal } from '../types';
 
 interface ResultScreenProps {
@@ -21,6 +22,7 @@ interface FoodAnalysis {
 
 const ResultScreen: React.FC<ResultScreenProps> = ({ image, onSave, onRetake, targetDate }) => {
   const { addMeal, getTodayString } = useData();
+  const { t } = useLanguage();
   const [analysis, setAnalysis] = useState<FoodAnalysis | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -77,12 +79,12 @@ const ResultScreen: React.FC<ResultScreenProps> = ({ image, onSave, onRetake, ta
           >
             <span className="material-symbols-outlined text-2xl">close</span>
           </button>
-          <h2 className="text-text-dark dark:text-white text-lg font-bold leading-tight tracking-[-0.015em]">Result</h2>
+          <h2 className="text-text-dark dark:text-white text-lg font-bold leading-tight tracking-[-0.015em]">{t('result')}</h2>
           <button 
             onClick={onRetake}
             className="flex h-10 px-3 items-center justify-center rounded-full text-primary hover:bg-primary/10 transition-colors"
           >
-            <span className="text-sm font-bold">Retake</span>
+            <span className="text-sm font-bold">{t('retake')}</span>
           </button>
         </div>
       </header>
@@ -99,7 +101,7 @@ const ResultScreen: React.FC<ResultScreenProps> = ({ image, onSave, onRetake, ta
             {loading && (
                 <div className="absolute inset-0 bg-black/40 backdrop-blur-sm flex flex-col items-center justify-center text-white">
                     <div className="size-12 border-4 border-white/30 border-t-white rounded-full animate-spin mb-4"></div>
-                    <p className="font-semibold animate-pulse">Analyzing...</p>
+                    <p className="font-semibold animate-pulse">{t('analyzing')}</p>
                 </div>
             )}
             <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent pointer-events-none"></div>
@@ -139,19 +141,19 @@ const ResultScreen: React.FC<ResultScreenProps> = ({ image, onSave, onRetake, ta
                 {/* Nutrient Breakdown Cards */}
                 <div className="grid grid-cols-2 gap-3 mb-8">
                   <div className="bg-white dark:bg-surface-dark p-4 rounded-2xl flex flex-col items-center justify-center border border-neutral-100 dark:border-neutral-800 shadow-sm">
-                    <span className="text-xs font-bold text-neutral-400 uppercase tracking-wider mb-1">Protein</span>
+                    <span className="text-xs font-bold text-neutral-400 uppercase tracking-wider mb-1">{t('protein')}</span>
                     <span className="text-xl font-bold text-neutral-900 dark:text-white">{analysis.protein}g</span>
                   </div>
                   <div className="bg-white dark:bg-surface-dark p-4 rounded-2xl flex flex-col items-center justify-center border border-neutral-100 dark:border-neutral-800 shadow-sm">
-                    <span className="text-xs font-bold text-neutral-400 uppercase tracking-wider mb-1">Carbs</span>
+                    <span className="text-xs font-bold text-neutral-400 uppercase tracking-wider mb-1">{t('carbs')}</span>
                     <span className="text-xl font-bold text-neutral-900 dark:text-white">{analysis.carbs}g</span>
                   </div>
                   <div className="bg-white dark:bg-surface-dark p-4 rounded-2xl flex flex-col items-center justify-center border border-neutral-100 dark:border-neutral-800 shadow-sm">
-                    <span className="text-xs font-bold text-neutral-400 uppercase tracking-wider mb-1">Fat</span>
+                    <span className="text-xs font-bold text-neutral-400 uppercase tracking-wider mb-1">{t('fat')}</span>
                     <span className="text-xl font-bold text-neutral-900 dark:text-white">{analysis.fat}g</span>
                   </div>
                   <div className="bg-white dark:bg-surface-dark p-4 rounded-2xl flex flex-col items-center justify-center border border-neutral-100 dark:border-neutral-800 shadow-sm">
-                    <span className="text-xs font-bold text-neutral-400 uppercase tracking-wider mb-1">Sugar</span>
+                    <span className="text-xs font-bold text-neutral-400 uppercase tracking-wider mb-1">{t('sugar')}</span>
                     <span className="text-xl font-bold text-neutral-900 dark:text-white">{analysis.sugar}g</span>
                   </div>
                 </div>
@@ -162,7 +164,7 @@ const ResultScreen: React.FC<ResultScreenProps> = ({ image, onSave, onRetake, ta
                   className="w-full h-14 bg-primary text-white font-bold rounded-2xl shadow-float hover:bg-primary-dark transition-all active:scale-[0.98] flex items-center justify-center gap-2"
                 >
                   <span className="material-symbols-outlined">add_circle</span>
-                  Add to Diary
+                  {t('add_to_diary')}
                 </button>
             </>
         ) : null}

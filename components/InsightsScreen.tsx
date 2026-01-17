@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { Screen, User } from '../types';
 import { useData } from '../contexts/DataContext';
+import { useLanguage } from '../contexts/LanguageContext';
 import BottomNav from './BottomNav';
 
 interface InsightsScreenProps {
@@ -11,6 +12,7 @@ interface InsightsScreenProps {
 
 const InsightsScreen: React.FC<InsightsScreenProps> = ({ onNavigate, onFabClick, user }) => {
   const { meals } = useData();
+  const { t } = useLanguage();
 
   // 1. Calculate Last 7 Days Calorie History
   const weeklyData = useMemo(() => {
@@ -139,14 +141,14 @@ const InsightsScreen: React.FC<InsightsScreenProps> = ({ onNavigate, onFabClick,
     <div className="relative flex h-full min-h-screen w-full flex-col max-w-md mx-auto bg-background-light dark:bg-background-dark pb-32 transition-colors duration-300">
       {/* Header */}
       <header className="flex flex-col px-6 pt-8 pb-4 sticky top-0 z-20 bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-md">
-        <h1 className="text-2xl font-extrabold text-neutral-900 dark:text-white">Insights</h1>
+        <h1 className="text-2xl font-extrabold text-neutral-900 dark:text-white">{t('nav_insights')}</h1>
       </header>
 
       <main className="flex flex-col px-6 gap-8 animate-enter">
         {/* Weekly Calories Chart */}
         <section>
           <div className="flex items-center justify-between mb-4">
-             <h3 className="text-lg font-bold text-neutral-800 dark:text-white">Calories this week</h3>
+             <h3 className="text-lg font-bold text-neutral-800 dark:text-white">{t('calories_this_week')}</h3>
              <span className="text-xs font-medium text-neutral-400 bg-neutral-100 dark:bg-neutral-800 px-2 py-1 rounded-md">{dateRangeLabel}</span>
           </div>
           
@@ -176,7 +178,7 @@ const InsightsScreen: React.FC<InsightsScreenProps> = ({ onNavigate, onFabClick,
               })}
             </div>
             <div className="mt-4 pt-4 border-t border-neutral-100 dark:border-neutral-700 flex justify-between items-center text-sm">
-               <span className="text-neutral-500">Weekly Average</span>
+               <span className="text-neutral-500">{t('weekly_average')}</span>
                <span className="font-bold text-neutral-900 dark:text-white">{averageCalories} kcal</span>
             </div>
           </div>
@@ -184,7 +186,7 @@ const InsightsScreen: React.FC<InsightsScreenProps> = ({ onNavigate, onFabClick,
 
         {/* Macro Distribution Pie */}
         <section>
-          <h3 className="text-lg font-bold text-neutral-800 dark:text-white mb-4">Macro Distribution</h3>
+          <h3 className="text-lg font-bold text-neutral-800 dark:text-white mb-4">{t('macro_distribution')}</h3>
           {macroStats.hasData ? (
              <div className="bg-white dark:bg-surface-dark p-6 rounded-3xl shadow-card border border-neutral-100 dark:border-neutral-800 flex items-center justify-between">
                 <div className="relative size-32 shrink-0">
@@ -234,22 +236,22 @@ const InsightsScreen: React.FC<InsightsScreenProps> = ({ onNavigate, onFabClick,
                     <div className="flex items-center gap-2">
                         <div className="size-3 rounded-full bg-accent shrink-0"></div>
                         <div className="flex flex-col min-w-0">
-                            <span className="text-xs font-bold text-neutral-900 dark:text-white truncate">{macroStats.carbsPct}% Carbs</span>
-                            <span className="text-[10px] text-neutral-500">{macroStats.carbs}g consumed</span>
+                            <span className="text-xs font-bold text-neutral-900 dark:text-white truncate">{macroStats.carbsPct}% {t('carbs')}</span>
+                            <span className="text-[10px] text-neutral-500">{macroStats.carbs}g {t('consumed')}</span>
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
                         <div className="size-3 rounded-full bg-primary shrink-0"></div>
                         <div className="flex flex-col min-w-0">
-                            <span className="text-xs font-bold text-neutral-900 dark:text-white truncate">{macroStats.proteinPct}% Protein</span>
-                            <span className="text-[10px] text-neutral-500">{macroStats.protein}g consumed</span>
+                            <span className="text-xs font-bold text-neutral-900 dark:text-white truncate">{macroStats.proteinPct}% {t('protein')}</span>
+                            <span className="text-[10px] text-neutral-500">{macroStats.protein}g {t('consumed')}</span>
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
                         <div className="size-3 rounded-full bg-red-300 shrink-0"></div>
                         <div className="flex flex-col min-w-0">
-                            <span className="text-xs font-bold text-neutral-900 dark:text-white truncate">{macroStats.fatPct}% Fat</span>
-                            <span className="text-[10px] text-neutral-500">{macroStats.fat}g consumed</span>
+                            <span className="text-xs font-bold text-neutral-900 dark:text-white truncate">{macroStats.fatPct}% {t('fat')}</span>
+                            <span className="text-[10px] text-neutral-500">{macroStats.fat}g {t('consumed')}</span>
                         </div>
                     </div>
                 </div>
@@ -267,7 +269,7 @@ const InsightsScreen: React.FC<InsightsScreenProps> = ({ onNavigate, onFabClick,
 
         {/* Weight Trend */}
         <section className="mb-6">
-           <h3 className="text-lg font-bold text-neutral-800 dark:text-white mb-4">Weight Trend</h3>
+           <h3 className="text-lg font-bold text-neutral-800 dark:text-white mb-4">{t('weight_trend')}</h3>
            <div className="bg-primary/5 dark:bg-primary/10 rounded-3xl p-6 relative overflow-hidden h-48 flex items-center justify-center border border-primary/20">
               {user ? (
                 <>
@@ -308,7 +310,7 @@ const InsightsScreen: React.FC<InsightsScreenProps> = ({ onNavigate, onFabClick,
                         <div className="text-3xl font-extrabold text-primary-dark dark:text-primary">
                             {user.weight} <span className="text-sm font-medium">kg</span>
                         </div>
-                        <span className="text-xs text-primary-dark/70 dark:text-primary/70">Current Weight</span>
+                        <span className="text-xs text-primary-dark/70 dark:text-primary/70">{t('current_weight')}</span>
                     </div>
                 </>
               ) : (
