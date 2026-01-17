@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Screen, User } from './types';
+import { Screen, User, Meal } from './types';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { DataProvider } from './contexts/DataContext';
 import SplashScreen from './components/SplashScreen';
@@ -15,6 +15,7 @@ const AppContent: React.FC = () => {
   const [currentScreen, setCurrentScreen] = useState<Screen>('SPLASH');
   const [previousTab, setPreviousTab] = useState<Screen>('HOME');
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
+  const [editingMeal, setEditingMeal] = useState<Meal | null>(null);
   
   // Persistent User State
   const [user, setUser] = useState<User | null>(() => {
@@ -62,6 +63,11 @@ const AppContent: React.FC = () => {
     setCurrentScreen('RESULT');
   };
 
+  const handleEditMeal = (meal: Meal) => {
+    setEditingMeal(meal);
+    setCurrentScreen('MANUAL_ENTRY');
+  };
+
   const logoutUser = () => {
     setUser(null);
     localStorage.removeItem('nutrisnap_user');
@@ -72,15 +78,21 @@ const AppContent: React.FC = () => {
       case 'SPLASH':
         return <SplashScreen onComplete={() => navigateTo('HOME')} />;
       case 'HOME':
-        return <HomeScreen onNavigate={navigateTo} user={user} />;
+        return <HomeScreen onNavigate={navigateTo} user={user} onEdit={handleEditMeal} />;
       case 'DIARY':
-        return <DiaryScreen onNavigate={navigateTo} />;
+        return <DiaryScreen onNavigate={navigateTo} onEdit={handleEditMeal} />;
       case 'INSIGHTS':
         return <InsightsScreen onNavigate={navigateTo} />;
       case 'CAMERA':
-        return <CameraScreen onCapture={handleCapture} onCancel={() => setCurrentScreen(previousTab)} onManualEntry={() => setCurrentScreen('MANUAL_ENTRY')} />;
+        return <CameraScreen onCapture={handleCapture} onCancel={() => setCurrentScreen(previousTab)} onManualEntry={() => { setEditingMeal(null); setCurrentScreen('MANUAL_ENTRY'); }} />;
       case 'MANUAL_ENTRY':
-        return <ManualEntryScreen onSave={() => setCurrentScreen(previousTab)} onCancel={() => setCurrentScreen(previousTab)} />;
+        return (
+            <ManualEntryScreen 
+                mealToEdit={editingMeal}
+                onSave={() => { setEditingMeal(null); setCurrentScreen(previousTab); }} 
+                onCancel={() => { setEditingMeal(null); setCurrentScreen(previousTab); }} 
+            />
+        );
       case 'RESULT':
         return <ResultScreen image={capturedImage} onSave={() => setCurrentScreen(previousTab)} onRetake={() => setCurrentScreen('CAMERA')} />;
       case 'PROFILE':
@@ -93,7 +105,7 @@ const AppContent: React.FC = () => {
           />
         );
       default:
-        return <HomeScreen onNavigate={navigateTo} user={user} />;
+        return <HomeScreen onNavigate={navigateTo} user={user} onEdit={handleEditMeal} />;
     }
   };
 

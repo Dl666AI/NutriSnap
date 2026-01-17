@@ -5,28 +5,45 @@ import { Meal } from '../types';
 interface ManualEntryScreenProps {
   onSave: () => void;
   onCancel: () => void;
+  mealToEdit?: Meal | null;
 }
 
-const ManualEntryScreen: React.FC<ManualEntryScreenProps> = ({ onSave, onCancel }) => {
-  const { addMeal } = useData();
-  const [name, setName] = useState('');
-  const [calories, setCalories] = useState('');
-  const [protein, setProtein] = useState('');
-  const [sugar, setSugar] = useState('');
-  const [mealType, setMealType] = useState<Meal['type']>('Snack');
+const ManualEntryScreen: React.FC<ManualEntryScreenProps> = ({ onSave, onCancel, mealToEdit }) => {
+  const { addMeal, updateMeal } = useData();
+  
+  // Initialize state with mealToEdit values if available
+  const [name, setName] = useState(mealToEdit?.name || '');
+  const [calories, setCalories] = useState(mealToEdit?.calories.toString() || '');
+  const [protein, setProtein] = useState(mealToEdit?.protein?.toString() || '');
+  const [sugar, setSugar] = useState(mealToEdit?.sugar?.toString() || '');
+  const [mealType, setMealType] = useState<Meal['type']>(mealToEdit?.type || 'Snack');
 
   const handleSave = () => {
-    const newMeal: Meal = {
-      id: Date.now().toString(),
-      name: name || 'Manual Entry',
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    // Preserve existing data if editing, especially properties not in this form (like fat/carbs/image)
+    const id = mealToEdit ? mealToEdit.id : Date.now().toString();
+    const time = mealToEdit ? mealToEdit.time : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const imageUrl = mealToEdit ? mealToEdit.imageUrl : undefined;
+    const fat = mealToEdit?.fat;
+    const carbs = mealToEdit?.carbs;
+
+    const mealData: Meal = {
+      id,
+      name: name || (mealToEdit ? 'Unnamed Meal' : 'Manual Entry'),
+      time,
       calories: parseInt(calories) || 0,
       protein: parseInt(protein) || 0,
       sugar: parseInt(sugar) || 0,
       type: mealType,
+      imageUrl,
+      fat,
+      carbs
     };
 
-    addMeal(newMeal);
+    if (mealToEdit) {
+      updateMeal(mealData);
+    } else {
+      addMeal(mealData);
+    }
     onSave();
   };
 
@@ -40,7 +57,9 @@ const ManualEntryScreen: React.FC<ManualEntryScreenProps> = ({ onSave, onCancel 
           >
             <span className="material-symbols-outlined text-2xl">close</span>
           </button>
-          <h2 className="text-text-dark dark:text-white text-lg font-bold leading-tight tracking-[-0.015em]">Log Manually</h2>
+          <h2 className="text-text-dark dark:text-white text-lg font-bold leading-tight tracking-[-0.015em]">
+            {mealToEdit ? 'Edit Meal' : 'Log Manually'}
+          </h2>
           <div className="w-10"></div>
         </div>
       </header>
@@ -126,8 +145,8 @@ const ManualEntryScreen: React.FC<ManualEntryScreenProps> = ({ onSave, onCancel 
           onClick={handleSave}
           className="w-full h-14 bg-primary text-white font-bold rounded-2xl shadow-float active:scale-[0.98] transition-all flex items-center justify-center gap-2"
         >
-          <span className="material-symbols-outlined">save</span>
-          Save Entry
+          <span className="material-symbols-outlined">{mealToEdit ? 'update' : 'save'}</span>
+          {mealToEdit ? 'Update Entry' : 'Save Entry'}
         </button>
       </div>
     </div>

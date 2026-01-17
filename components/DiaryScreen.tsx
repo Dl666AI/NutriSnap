@@ -5,9 +5,10 @@ import BottomNav from './BottomNav';
 
 interface DiaryScreenProps {
   onNavigate: (screen: Screen) => void;
+  onEdit: (meal: Meal) => void;
 }
 
-const DiaryScreen: React.FC<DiaryScreenProps> = ({ onNavigate }) => {
+const DiaryScreen: React.FC<DiaryScreenProps> = ({ onNavigate, onEdit }) => {
   const { meals, totals, targets, removeMeal } = useData();
 
   const caloriesLeft = Math.max(0, targets.calories - totals.calories);
@@ -57,7 +58,10 @@ const DiaryScreen: React.FC<DiaryScreenProps> = ({ onNavigate }) => {
         <div className="flex flex-col gap-3">
           {sectionMeals.map(meal => (
             <div key={meal.id} className="relative group">
-              <div className="flex items-center p-3 bg-white dark:bg-surface-dark rounded-xl shadow-sm border border-neutral-100 dark:border-neutral-800">
+              <div 
+                onClick={() => onEdit(meal)}
+                className="flex items-center p-3 bg-white dark:bg-surface-dark rounded-xl shadow-sm border border-neutral-100 dark:border-neutral-800 cursor-pointer hover:border-primary/30 transition-colors"
+              >
                   {meal.imageUrl ? (
                     <div className="size-12 rounded-lg bg-neutral-100 bg-cover bg-center shrink-0" style={{backgroundImage: `url("${meal.imageUrl}")`}}></div>
                   ) : (
@@ -72,8 +76,8 @@ const DiaryScreen: React.FC<DiaryScreenProps> = ({ onNavigate }) => {
                   <div className="font-bold text-neutral-700 dark:text-neutral-300 ml-2">{meal.calories}</div>
               </div>
               <button 
-                onClick={() => removeMeal(meal.id)}
-                className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
+                onClick={(e) => { e.stopPropagation(); removeMeal(meal.id); }}
+                className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm hover:scale-110 z-10"
               >
                 <span className="material-symbols-outlined text-xs">close</span>
               </button>

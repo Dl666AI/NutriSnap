@@ -12,6 +12,7 @@ interface DailyTotals {
 interface DataContextType {
   meals: Meal[];
   addMeal: (meal: Meal) => void;
+  updateMeal: (meal: Meal) => void;
   removeMeal: (id: string) => void;
   totals: DailyTotals;
   targets: DailyTotals;
@@ -68,6 +69,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setMeals(prev => [meal, ...prev]);
   };
 
+  const updateMeal = (updatedMeal: Meal) => {
+    setMeals(prev => prev.map(meal => (meal.id === updatedMeal.id ? updatedMeal : meal)));
+  };
+
   const removeMeal = (id: string) => {
     setMeals(prev => prev.filter(m => m.id !== id));
   };
@@ -105,7 +110,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   return (
     <DataContext.Provider value={{ 
       meals, 
-      addMeal, 
+      addMeal,
+      updateMeal,
       removeMeal, 
       totals, 
       targets: DEFAULT_TARGETS 

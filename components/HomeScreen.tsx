@@ -1,14 +1,15 @@
 import React from 'react';
-import { Screen, User } from '../types';
+import { Screen, User, Meal } from '../types';
 import { useData } from '../contexts/DataContext';
 import BottomNav from './BottomNav';
 
 interface HomeScreenProps {
   onNavigate: (screen: Screen) => void;
   user?: User | null;
+  onEdit: (meal: Meal) => void;
 }
 
-const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigate, user }) => {
+const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigate, user, onEdit }) => {
   const { totals, targets, meals } = useData();
 
   const caloriesLeft = Math.max(0, targets.calories - totals.calories);
@@ -27,8 +28,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigate, user }) => {
   const recentMeals = meals.slice(0, 3);
 
   // Calculate degree for conic gradient (360 * percent / 100)
-  // We want it to start from top, but CSS conic gradient starts from 0deg (top).
-  // Actually, let's just map the percentage to the color stop.
   const gradientString = `conic-gradient(#9cab8c 0% ${progressPercent}%, #F8DDA4 ${progressPercent}% 100%)`;
 
   return (
@@ -149,7 +148,11 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigate, user }) => {
           <div className="flex flex-col gap-4">
             {recentMeals.length > 0 ? (
               recentMeals.map((meal) => (
-                <div key={meal.id} className="flex items-center p-3 pr-4 bg-white dark:bg-surface-dark rounded-xl shadow-soft border border-neutral-100 dark:border-neutral-800 transition-transform active:scale-[0.99]">
+                <div 
+                  key={meal.id} 
+                  onClick={() => onEdit(meal)}
+                  className="flex items-center p-3 pr-4 bg-white dark:bg-surface-dark rounded-xl shadow-soft border border-neutral-100 dark:border-neutral-800 transition-transform active:scale-[0.99] cursor-pointer"
+                >
                   <div 
                     className="size-16 shrink-0 rounded-lg bg-cover bg-center overflow-hidden" 
                     style={{backgroundImage: `url("${meal.imageUrl}")`}}
