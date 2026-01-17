@@ -19,6 +19,28 @@ interface DataContextType {
   getTodayString: () => string;
 }
 
+// --- Future Proofing: Storage Adapter ---
+// To switch to a backend later, replace the implementation of 'load' and 'save' 
+// with your API calls (e.g., fetch, axios, firebase).
+const StorageAdapter = {
+  getKey: (userId: string | null) => {
+    return userId ? `nutrisnap_meals_${userId}` : 'nutrisnap_meals_guest';
+  },
+
+  load: (userId: string | null): Meal[] => {
+    if (typeof window === 'undefined') return [];
+    const key = StorageAdapter.getKey(userId);
+    const saved = localStorage.getItem(key);
+    return saved ? JSON.parse(saved) : DEMO_MEALS;
+  },
+
+  save: (userId: string | null, meals: Meal[]) => {
+    if (typeof window === 'undefined') return;
+    const key = StorageAdapter.getKey(userId);
+    localStorage.setItem(key, JSON.stringify(meals));
+  }
+};
+
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
 const DEFAULT_TARGETS = {
@@ -64,18 +86,14 @@ const DEMO_MEALS: Meal[] = [
   }
 ];
 
-export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [meals, setMeals] = useState<Meal[]>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('nutrisnap_meals');
-      return saved ? JSON.parse(saved) : DEMO_MEALS;
-    }
-    return DEMO_MEALS;
-  });
+export const DataProvider: React.FC<{ children: React.ReactNode; userId: string | null }> = ({ children, userId }) => {
+  // Initialize state by loading from storage based on userId
+  const [meals, setMeals] = useState<Meal[]>(() => StorageAdapter.load(userId));
 
+  // Whenever meals change, persist them using the adapter
   useEffect(() => {
-    localStorage.setItem('nutrisnap_meals', JSON.stringify(meals));
-  }, [meals]);
+    StorageAdapter.save(userId, meals);
+  }, [meals, userId]);
 
   const addMeal = (meal: Meal) => {
     setMeals(prev => [meal, ...prev]);

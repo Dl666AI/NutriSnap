@@ -5,9 +5,10 @@ interface CameraScreenProps {
   onCapture: (imageSrc?: string) => void;
   onCancel: () => void;
   onManualEntry: () => void;
+  autoLaunchGallery?: boolean;
 }
 
-const CameraScreen: React.FC<CameraScreenProps> = ({ onCapture, onCancel, onManualEntry }) => {
+const CameraScreen: React.FC<CameraScreenProps> = ({ onCapture, onCancel, onManualEntry, autoLaunchGallery = false }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -34,6 +35,14 @@ const CameraScreen: React.FC<CameraScreenProps> = ({ onCapture, onCancel, onManu
     }
 
     startCamera();
+
+    // Auto-launch gallery if requested
+    if (autoLaunchGallery) {
+        // Small timeout to ensure DOM is ready and it feels natural
+        setTimeout(() => {
+            fileInputRef.current?.click();
+        }, 500);
+    }
 
     return () => {
       if (stream) {

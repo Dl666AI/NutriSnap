@@ -158,7 +158,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({
              </div>
         )}
 
-        <BottomNav currentScreen="PROFILE" onNavigate={onNavigate} onCameraClick={() => onNavigate('CAMERA')} />
+        <BottomNav currentScreen="PROFILE" onNavigate={onNavigate} onCameraClick={() => onNavigate('ADD_MENU')} />
       </div>
     );
   }
@@ -294,7 +294,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({
       <BottomNav 
         currentScreen="PROFILE" 
         onNavigate={onNavigate} 
-        onCameraClick={() => onNavigate('CAMERA')} 
+        onCameraClick={() => onNavigate('ADD_MENU')} 
       />
     </div>
   );

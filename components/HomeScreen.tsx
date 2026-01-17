@@ -178,7 +178,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigate, user, onEdit }) => 
 
             {/* Hint Card */}
             {caloriesLeft > 0 && (
-              <div className="flex items-center justify-center p-6 border-2 border-dashed border-neutral-200 dark:border-neutral-700 rounded-xl cursor-pointer hover:bg-neutral-50 dark:hover:bg-white/5 transition-colors" onClick={() => onNavigate('CAMERA')}>
+              <div className="flex items-center justify-center p-6 border-2 border-dashed border-neutral-200 dark:border-neutral-700 rounded-xl cursor-pointer hover:bg-neutral-50 dark:hover:bg-white/5 transition-colors" onClick={() => onNavigate('ADD_MENU')}>
                 <p className="text-sm text-neutral-400 font-medium">Tap to log your next meal</p>
               </div>
             )}
@@ -189,7 +189,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigate, user, onEdit }) => 
       <BottomNav 
         currentScreen="HOME" 
         onNavigate={onNavigate} 
-        onCameraClick={() => onNavigate('CAMERA')} 
+        onCameraClick={() => onNavigate('ADD_MENU')} 
       />
     </div>
   );

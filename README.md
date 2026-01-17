@@ -17,6 +17,21 @@ NutriSnap aims to bridge the gap between "wanting to eat healthy" and "actually 
 
 ---
 
+## Data Persistence & Limitations
+
+**⚠️ Important Note for Users & Developers**
+
+NutriSnap currently operates as a client-side application using the browser's **Local Storage** to persist data. This has several important implications:
+
+1.  **Device Specificity**: Data is stored *only* on the device and browser where it was created. If you log a meal on your phone, you will not see it on your laptop, even if you log in with the same email.
+2.  **Browser Cache**: Clearing your browser's cache, cookies, or local data will **permanently delete** your logs and profile settings.
+3.  **Privacy**: Your nutrition data never leaves your device (except for the transient API call to the AI model for image analysis).
+
+**For Developers - Architecture Note:**
+The application uses a `StorageAdapter` pattern in `DataContext.tsx`. The current implementation writes to `localStorage` using keys namespaced by User ID (e.g., `nutrisnap_meals_12345`). To upgrade this to a cloud-based solution (like Firebase or PostgreSQL), you simply need to update the `StorageAdapter.load` and `StorageAdapter.save` methods to perform API calls. The rest of the UI is agnostic to the storage medium.
+
+---
+
 ## Overall Architecture
 
 NutriSnap follows a modular, component-based architecture built with **React** and **Tailwind CSS**.

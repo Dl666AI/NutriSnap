@@ -1,5 +1,5 @@
 
-export type Screen = 'SPLASH' | 'HOME' | 'CAMERA' | 'RESULT' | 'PROFILE' | 'DIARY' | 'INSIGHTS' | 'MANUAL_ENTRY';
+export type Screen = 'SPLASH' | 'HOME' | 'CAMERA' | 'RESULT' | 'PROFILE' | 'DIARY' | 'INSIGHTS' | 'MANUAL_ENTRY' | 'ADD_MENU';
 export type Theme = 'light' | 'dark' | 'system';
 
 export interface User {

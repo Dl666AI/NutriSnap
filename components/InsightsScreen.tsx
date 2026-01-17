@@ -124,7 +124,7 @@ const InsightsScreen: React.FC<InsightsScreenProps> = ({ onNavigate }) => {
       <BottomNav 
         currentScreen="INSIGHTS" 
         onNavigate={onNavigate} 
-        onCameraClick={() => onNavigate('CAMERA')} 
+        onCameraClick={() => onNavigate('ADD_MENU')} 
       />
     </div>
   );
