@@ -17,9 +17,10 @@ interface AppContentProps {
   user: User | null;
   onLogin: (user: User) => void;
   onLogout: () => void;
+  onUpdateUser: (updatedUser: User) => void;
 }
 
-const AppContent: React.FC<AppContentProps> = ({ user, onLogin, onLogout }) => {
+const AppContent: React.FC<AppContentProps> = ({ user, onLogin, onLogout, onUpdateUser }) => {
   const { getTodayString } = useData();
   const [currentScreen, setCurrentScreen] = useState<Screen>('SPLASH');
   const [previousTab, setPreviousTab] = useState<Screen>('HOME');
@@ -156,6 +157,7 @@ const AppContent: React.FC<AppContentProps> = ({ user, onLogin, onLogout }) => {
             user={user} 
             onLogout={onLogout}
             onLogin={onLogin}
+            onUpdateUser={onUpdateUser}
             onFabClick={handleFabClick}
           />
         );
@@ -199,6 +201,11 @@ const App: React.FC = () => {
     localStorage.setItem('nutrisnap_user', JSON.stringify(newUser));
   };
 
+  const handleUpdateUser = (updatedUser: User) => {
+    setUser(updatedUser);
+    localStorage.setItem('nutrisnap_user', JSON.stringify(updatedUser));
+  };
+
   const handleLogout = () => {
     setUser(null);
     localStorage.removeItem('nutrisnap_user');
@@ -214,8 +221,17 @@ const App: React.FC = () => {
         1. No stale state from the previous user leaks into the new session.
         2. The initialization logic in DataProvider runs fresh for the new user ID.
       */}
-      <DataProvider userId={user?.id || null} key={user?.id || 'guest'}>
-        <AppContent user={user} onLogin={handleLogin} onLogout={handleLogout} />
+      <DataProvider 
+        userId={user?.id || null} 
+        targetCalories={user?.dailyCalories} 
+        key={user?.id || 'guest'}
+      >
+        <AppContent 
+            user={user} 
+            onLogin={handleLogin} 
+            onLogout={handleLogout} 
+            onUpdateUser={handleUpdateUser} 
+        />
       </DataProvider>
     </ThemeProvider>
   );

@@ -7,6 +7,11 @@ export interface User {
   name: string;
   email: string;
   photoUrl: string;
+  // Physical Attributes
+  height?: number; // cm
+  weight?: number; // kg
+  age?: number;
+  dailyCalories?: number;
 }
 
 export interface Meal {

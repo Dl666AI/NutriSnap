@@ -19,6 +19,7 @@ interface ProfileScreenProps {
   user?: User | null;
   onLogout: () => void;
   onLogin: (user: User) => void;
+  onUpdateUser: (user: User) => void;
   onFabClick: () => void;
 }
 
@@ -27,10 +28,12 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({
     user, 
     onLogout,
     onLogin,
+    onUpdateUser,
     onFabClick
 }) => {
   const { theme, setTheme } = useTheme();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
   const [debugOrigin, setDebugOrigin] = useState<string>('');
   
@@ -43,6 +46,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({
   const days = Array.from({ length: 14 }, (_, i) => i + 1);
 
   const toggleSettings = () => setIsSettingsOpen(!isSettingsOpen);
+  const toggleEditProfile = () => setIsEditProfileOpen(!isEditProfileOpen);
 
   // Helper: Parse JWT Token safely
   const parseJwt = (token: string) => {
@@ -72,6 +76,21 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({
           setLoginError("Failed to decode user information from Google.");
         }
       }
+  };
+
+  // Handle Guest Login
+  const handleGuestLogin = () => {
+      const guestUser: User = {
+          id: 'guest_' + Date.now(),
+          name: 'Guest',
+          email: '',
+          photoUrl: '', 
+          dailyCalories: 2000,
+          weight: 70,
+          height: 175,
+          age: 25
+      };
+      onLogin(guestUser);
   };
 
   // Initialize Google Sign-In
@@ -194,15 +213,13 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({
                 )}
             </div>
 
-            {/* Apple Login Visual Placeholder */}
+            {/* Guest Login Option */}
             <button 
-                onClick={() => alert("Apple Sign-In requires developer configuration.")}
-                className="w-full h-[44px] bg-black text-white rounded-full flex items-center justify-center gap-3 font-medium hover:bg-neutral-800 transition-colors"
+                onClick={handleGuestLogin}
+                className="w-full h-[44px] bg-surface-light dark:bg-surface-dark border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-white rounded-full flex items-center justify-center gap-2 font-bold hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors"
             >
-                <svg className="h-4 w-4 fill-current" viewBox="0 0 24 24">
-                    <path d="M17.05 20.28c-.98.95-2.05 1.78-3.14 1.78-1.09 0-1.45-.67-2.73-.67-1.27 0-1.7.64-2.7.67-1.02.03-2.07-.86-3.13-1.87C3.2 18.06 1.34 14.15 1.34 10.61c0-3.53 2.18-5.39 4.31-5.39 1.12 0 2.05.67 2.76.67.71 0 1.83-.73 3.12-.73 1.36 0 2.55.51 3.32 1.48-3.12 1.76-2.61 5.91.5 7.15-.71 1.71-1.63 3.42-2.3 4.49zM12.03 4.54c-.11-1.89 1.48-3.53 3.2-3.53.11 1.94-1.61 3.65-3.2 3.53z"></path>
-                </svg>
-                <span className="text-sm">Sign in with Apple</span>
+                <span className="material-symbols-outlined text-xl">person</span>
+                <span className="text-sm">Continue as Guest</span>
             </button>
             
             {loginError && (
@@ -254,14 +271,18 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({
       {/* Header Section */}
       <header className="flex items-center justify-between px-6 pt-8 pb-4 bg-background-light dark:bg-background-dark sticky top-0 z-20">
         <div className="flex items-center gap-4">
-          <div className="relative group cursor-pointer">
-            <div className="size-14 rounded-full overflow-hidden border-2 border-white dark:border-background-dark shadow-sm ring-2 ring-primary/20 bg-neutral-100">
-              <img 
-                src={user.photoUrl} 
-                alt="User Profile" 
-                className="w-full h-full object-cover"
-                referrerPolicy="no-referrer"
-              />
+          <div className="relative group cursor-pointer" onClick={toggleEditProfile}>
+            <div className="size-14 rounded-full overflow-hidden border-2 border-white dark:border-background-dark shadow-sm ring-2 ring-primary/20 bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center">
+              {user.photoUrl ? (
+                  <img 
+                    src={user.photoUrl} 
+                    alt="User Profile" 
+                    className="w-full h-full object-cover"
+                    referrerPolicy="no-referrer"
+                  />
+              ) : (
+                  <span className="material-symbols-outlined text-3xl text-neutral-400">person</span>
+              )}
             </div>
             <div className="absolute bottom-0 right-0 size-4 bg-primary rounded-full border-2 border-white dark:border-background-dark"></div>
           </div>
@@ -278,14 +299,84 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({
         </button>
       </header>
 
+      {/* Stats Dashboard */}
+      <section className="px-6 py-4 animate-enter" style={{animationDelay: '0.1s'}}>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-neutral-900 dark:text-white text-lg font-bold">My Stats</h2>
+          <button 
+            onClick={toggleEditProfile}
+            className="text-primary font-semibold text-sm flex items-center gap-1 hover:text-primary-dark transition-colors"
+          >
+            <span className="material-symbols-outlined text-sm">edit</span>
+            Edit
+          </button>
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div 
+            onClick={toggleEditProfile}
+            className="bg-white dark:bg-surface-dark p-5 rounded-3xl shadow-card flex flex-col justify-between h-40 border border-neutral-100 dark:border-neutral-800 active:scale-[0.98] transition-transform cursor-pointer"
+          >
+            <div className="flex items-center gap-2 text-neutral-500 dark:text-neutral-400">
+              <span className="material-symbols-outlined text-lg">monitor_weight</span>
+              <span className="text-sm font-medium">Weight</span>
+            </div>
+            <div>
+              <div className="text-2xl font-extrabold text-neutral-900 dark:text-white">
+                {user.weight ? user.weight : '--'} <span className="text-base font-semibold text-neutral-500">kg</span>
+              </div>
+              <div className="flex items-center gap-1 mt-1">
+                 {/* Placeholder trend data */}
+                <span className="bg-primary/10 text-primary-dark text-xs font-bold px-2 py-0.5 rounded-full flex items-center gap-0.5">
+                   <span className="material-symbols-outlined text-xs">trending_flat</span> 0.0kg
+                </span>
+              </div>
+            </div>
+          </div>
+          
+          <div 
+            onClick={toggleEditProfile}
+            className="bg-white dark:bg-surface-dark p-5 rounded-3xl shadow-card flex flex-col justify-between h-40 border border-neutral-100 dark:border-neutral-800 active:scale-[0.98] transition-transform cursor-pointer"
+          >
+            <div className="flex items-center gap-2 text-neutral-500 dark:text-neutral-400">
+              <span className="material-symbols-outlined text-lg">accessibility_new</span>
+              <span className="text-sm font-medium">Height</span>
+            </div>
+            <div>
+              <div className="text-2xl font-extrabold text-neutral-900 dark:text-white">
+                {user.height ? user.height : '--'} <span className="text-base font-semibold text-neutral-500">cm</span>
+              </div>
+              {user.age ? (
+                  <p className="text-xs text-neutral-400 mt-2 font-medium">Age: {user.age} yrs</p>
+              ) : (
+                  <p className="text-xs text-neutral-400 mt-2 font-medium">Age: --</p>
+              )}
+            </div>
+          </div>
+
+          <div 
+            onClick={toggleEditProfile}
+            className="col-span-2 bg-accent/20 dark:bg-accent/10 p-5 rounded-3xl shadow-sm border border-accent/30 flex items-center justify-between active:scale-[0.99] transition-transform cursor-pointer"
+          >
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center gap-2 text-neutral-700 dark:text-neutral-300 mb-1">
+                <span className="material-symbols-outlined text-lg filled">local_fire_department</span>
+                <span className="text-sm font-bold">Daily Target</span>
+              </div>
+              <div className="text-2xl font-extrabold text-neutral-900 dark:text-white">
+                {user.dailyCalories ? user.dailyCalories : '2000'} <span className="text-base font-semibold text-neutral-600 dark:text-neutral-400">kcal</span>
+              </div>
+            </div>
+            <div className="size-12 rounded-full bg-accent/30 flex items-center justify-center">
+                 <span className="material-symbols-outlined text-accent-cream dark:text-accent">flag</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Consistency Calendar Section */}
-      <section className="px-6 py-2 animate-enter" style={{animationDelay: '0.1s'}}>
+      <section className="px-6 py-2 animate-enter" style={{animationDelay: '0.2s'}}>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-neutral-900 dark:text-white text-lg font-bold">Consistency</h2>
-          <button className="text-primary font-semibold text-sm flex items-center gap-1 hover:text-primary-dark">
-            October
-            <span className="material-symbols-outlined text-sm">expand_more</span>
-          </button>
         </div>
         <div className="bg-surface-light dark:bg-surface-dark rounded-3xl p-5 shadow-card">
           <div className="grid grid-cols-7 mb-2">
@@ -312,69 +403,20 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({
                <button key={d} className="aspect-square flex items-center justify-center rounded-full text-neutral-700 dark:text-neutral-300 text-sm font-medium hover:bg-neutral-100 dark:hover:bg-neutral-700">{d}</button>
             ))}
           </div>
-          <div className="mt-4 flex items-center justify-center gap-6">
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-primary"></span>
-              <span className="text-xs text-neutral-500 font-medium">Logged</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full border border-neutral-300"></span>
-              <span className="text-xs text-neutral-500 font-medium">Skipped</span>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Stats Dashboard */}
-      <section className="px-6 py-4 animate-enter" style={{animationDelay: '0.2s'}}>
-        <h2 className="text-neutral-900 dark:text-white text-lg font-bold mb-4">My Stats</h2>
-        <div className="grid grid-cols-2 gap-4">
-          <div className="bg-white dark:bg-surface-dark p-5 rounded-3xl shadow-card flex flex-col justify-between h-40 border border-neutral-100 dark:border-neutral-800">
-            <div className="flex items-center gap-2 text-neutral-500 dark:text-neutral-400">
-              <span className="material-symbols-outlined text-lg">monitor_weight</span>
-              <span className="text-sm font-medium">Weight</span>
-            </div>
-            <div>
-              <div className="text-2xl font-extrabold text-neutral-900 dark:text-white">68.5 <span className="text-base font-semibold text-neutral-500">kg</span></div>
-              <div className="flex items-center gap-1 mt-1">
-                <span className="bg-primary/10 text-primary-dark text-xs font-bold px-2 py-0.5 rounded-full flex items-center gap-0.5">
-                   <span className="material-symbols-outlined text-xs">trending_down</span> 1.2kg
-                </span>
-              </div>
-            </div>
-          </div>
-          <div className="bg-accent/20 dark:bg-accent/10 p-5 rounded-3xl shadow-sm flex flex-col justify-between h-40 border border-accent/30">
-            <div className="flex items-center justify-between text-neutral-700 dark:text-neutral-300">
-              <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-lg filled">local_fire_department</span>
-                <span className="text-sm font-bold">Streak</span>
-              </div>
-            </div>
-            <div>
-              <div className="text-3xl font-extrabold text-neutral-900 dark:text-white">12 <span className="text-base font-semibold">Days</span></div>
-            </div>
-          </div>
-          <div className="col-span-2 bg-white dark:bg-surface-dark p-5 rounded-3xl shadow-card border border-neutral-100 dark:border-neutral-800 flex items-center justify-between">
-            <div className="flex flex-col gap-1">
-              <div className="flex items-center gap-2 text-neutral-500 dark:text-neutral-400 mb-1">
-                <span className="material-symbols-outlined text-lg">restaurant</span>
-                <span className="text-sm font-medium">Avg. Intake</span>
-              </div>
-              <div className="text-2xl font-extrabold text-neutral-900 dark:text-white">1,950 <span className="text-base font-semibold text-neutral-500">kcal</span></div>
-            </div>
-            <div className="relative size-16 flex items-center justify-center">
-              <svg className="size-full -rotate-90" viewBox="0 0 36 36">
-                <path className="text-neutral-100 dark:text-neutral-700" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="3"></path>
-                <path className="text-primary" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeDasharray="75, 100" strokeLinecap="round" strokeWidth="3"></path>
-              </svg>
-              <span className="absolute text-xs font-bold text-primary">75%</span>
-            </div>
-          </div>
         </div>
       </section>
 
       {/* Settings Bottom Sheet Integration */}
       {isSettingsOpen && <SettingsSheet theme={theme} setTheme={setTheme} onClose={toggleSettings} onLogout={onLogout} isLoggedIn={true} />}
+
+      {/* Edit Profile Sheet */}
+      {isEditProfileOpen && (
+          <EditProfileSheet 
+            user={user} 
+            onClose={toggleEditProfile} 
+            onSave={(u) => { onUpdateUser(u); toggleEditProfile(); }} 
+          />
+      )}
 
       <BottomNav 
         currentScreen="PROFILE" 
@@ -447,5 +489,106 @@ const SettingsSheet: React.FC<SettingsSheetProps> = ({ theme, setTheme, onClose,
     </div>
   </div>
 );
+
+// Edit Profile Component
+interface EditProfileSheetProps {
+    user: User;
+    onClose: () => void;
+    onSave: (updatedUser: User) => void;
+}
+
+const EditProfileSheet: React.FC<EditProfileSheetProps> = ({ user, onClose, onSave }) => {
+    const [weight, setWeight] = useState(user.weight?.toString() || '');
+    const [height, setHeight] = useState(user.height?.toString() || '');
+    const [age, setAge] = useState(user.age?.toString() || '');
+    const [calories, setCalories] = useState(user.dailyCalories?.toString() || '2000');
+
+    const handleSave = () => {
+        onSave({
+            ...user,
+            weight: weight ? parseFloat(weight) : undefined,
+            height: height ? parseFloat(height) : undefined,
+            age: age ? parseInt(age) : undefined,
+            dailyCalories: calories ? parseInt(calories) : 2000
+        });
+    };
+
+    return (
+        <div className="fixed inset-0 z-[100] flex flex-col justify-end">
+            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity" onClick={onClose}></div>
+            <div className="relative bg-white dark:bg-background-dark rounded-t-3xl p-6 shadow-2xl animate-enter border-t border-neutral-100 dark:border-neutral-800 max-w-md mx-auto w-full">
+                <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-xl font-bold text-neutral-900 dark:text-white">Edit Profile</h2>
+                    <button onClick={onClose} className="p-2 -mr-2 text-neutral-500">
+                        <span className="material-symbols-outlined">close</span>
+                    </button>
+                </div>
+
+                <div className="space-y-5">
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold uppercase tracking-wider text-neutral-400 ml-1">Weight (kg)</label>
+                            <input 
+                                type="number" 
+                                value={weight}
+                                onChange={e => setWeight(e.target.value)}
+                                placeholder="e.g. 70"
+                                className="w-full h-12 px-4 rounded-xl bg-surface-light dark:bg-surface-dark border-none focus:ring-2 focus:ring-primary/50 text-neutral-800 dark:text-white font-semibold"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold uppercase tracking-wider text-neutral-400 ml-1">Height (cm)</label>
+                            <input 
+                                type="number" 
+                                value={height}
+                                onChange={e => setHeight(e.target.value)}
+                                placeholder="e.g. 175"
+                                className="w-full h-12 px-4 rounded-xl bg-surface-light dark:bg-surface-dark border-none focus:ring-2 focus:ring-primary/50 text-neutral-800 dark:text-white font-semibold"
+                            />
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold uppercase tracking-wider text-neutral-400 ml-1">Age</label>
+                            <input 
+                                type="number" 
+                                value={age}
+                                onChange={e => setAge(e.target.value)}
+                                placeholder="e.g. 25"
+                                className="w-full h-12 px-4 rounded-xl bg-surface-light dark:bg-surface-dark border-none focus:ring-2 focus:ring-primary/50 text-neutral-800 dark:text-white font-semibold"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold uppercase tracking-wider text-neutral-400 ml-1">Calorie Target</label>
+                            <input 
+                                type="number" 
+                                value={calories}
+                                onChange={e => setCalories(e.target.value)}
+                                placeholder="e.g. 2000"
+                                className="w-full h-12 px-4 rounded-xl bg-surface-light dark:bg-surface-dark border-none focus:ring-2 focus:ring-primary/50 text-neutral-800 dark:text-white font-semibold"
+                            />
+                        </div>
+                    </div>
+
+                    <div className="p-4 bg-accent/10 rounded-xl border border-accent/20">
+                        <p className="text-xs text-neutral-600 dark:text-neutral-400 leading-relaxed">
+                            <span className="font-bold text-neutral-800 dark:text-neutral-200">Note:</span> Updating your calorie target will automatically recalculate your macro goals for Protein, Carbs, and Fat based on a standard balanced diet.
+                        </p>
+                    </div>
+
+                    <div className="pt-2">
+                        <button 
+                            onClick={handleSave}
+                            className="w-full h-14 bg-primary text-white font-bold rounded-2xl shadow-float hover:bg-primary-dark transition-all active:scale-[0.98]"
+                        >
+                            Save Changes
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
 
 export default ProfileScreen;

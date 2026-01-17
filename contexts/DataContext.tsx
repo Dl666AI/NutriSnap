@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useMemo } from 'react';
 import { Meal, Macro } from '../types';
 
 interface DailyTotals {
@@ -43,13 +43,8 @@ const StorageAdapter = {
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
-const DEFAULT_TARGETS = {
-  calories: 2000,
-  carbs: 250,
-  protein: 140,
-  fat: 70,
-  sugar: 50,
-};
+// Default Fallback
+const DEFAULT_CALORIES = 2000;
 
 // Helper to get local YYYY-MM-DD
 const getTodayString = () => {
@@ -61,32 +56,9 @@ const getTodayString = () => {
 };
 
 // Initial demo data
-const DEMO_MEALS: Meal[] = [
-  {
-    id: '1',
-    name: 'Avocado Toast',
-    time: '8:30 AM',
-    date: getTodayString(),
-    calories: 350,
-    protein: 8,
-    sugar: 4,
-    imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCL-m-VY6XKvcYscM3D_-IXKQGx2jx8em2yXnwD33SSpy05NZQcl82Oy6_AHB54sXd8n9-PKhSyLxcJ_waWBjgaE-3y_l9z5w6eWrRLCZM47Zesrhspi0Gmf0uhQ1PzWEmGvbuKKRsPidzh69W1uyMJk28tI_FMdNV2-XXGgafoSKDkXOYvXTQKhqSr9Ay98r-KpqYVsAK6xN1AKmH1KBjXtX7yfuTAE9XkvppdBChoh4C9E4tEj_NrLjqyJaGvKqpamEyArLm80FPX',
-    type: 'Breakfast'
-  },
-  {
-    id: '2',
-    name: 'Chicken Salad',
-    time: '1:15 PM',
-    date: getTodayString(),
-    calories: 420,
-    protein: 32,
-    sugar: 6,
-    imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBL6S-dLF_MhW5_YkEPdhS5HbKzncJDt85F7PuvgZKNxJDCVCghetLdo7JBkNF1hgFz3st5lyfMM9oLgsFTpB5ZRL4LAxKY4UiCPpoj0GBRaqCzH1CP6Xl-yUY5kwHetiNYyypDNZasmp_tSObUzi5rFJl2DQy87KJT8GxikqOCOZuyVQ93mPx0L9b5caml2eaIBvSszvKaau2VhhCpHtTO_XOEHniOrB_PHIdjL7OrhwpS0VCNqfbQxorMQtheh5mOWBe6NpRfHLVI',
-    type: 'Lunch'
-  }
-];
+const DEMO_MEALS: Meal[] = [];
 
-export const DataProvider: React.FC<{ children: React.ReactNode; userId: string | null }> = ({ children, userId }) => {
+export const DataProvider: React.FC<{ children: React.ReactNode; userId: string | null; targetCalories?: number }> = ({ children, userId, targetCalories }) => {
   // Initialize state by loading from storage based on userId
   const [meals, setMeals] = useState<Meal[]>(() => StorageAdapter.load(userId));
 
@@ -106,6 +78,19 @@ export const DataProvider: React.FC<{ children: React.ReactNode; userId: string 
   const removeMeal = (id: string) => {
     setMeals(prev => prev.filter(m => m.id !== id));
   };
+
+  // Calculate Dynamic Targets based on calorie input
+  const targets = useMemo(() => {
+    const cals = targetCalories || DEFAULT_CALORIES;
+    return {
+      calories: cals,
+      // Standard Macro Split: 30% Protein, 45% Carbs, 25% Fat
+      protein: Math.round((cals * 0.30) / 4),
+      carbs: Math.round((cals * 0.45) / 4),
+      fat: Math.round((cals * 0.25) / 9),
+      sugar: 50, // Standard constant recommended limit
+    };
+  }, [targetCalories]);
 
   // Calculate totals ONLY for today
   const todayStr = getTodayString();
@@ -146,7 +131,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode; userId: string 
       updateMeal,
       removeMeal, 
       totals, 
-      targets: DEFAULT_TARGETS,
+      targets,
       getTodayString
     }}>
       {children}
