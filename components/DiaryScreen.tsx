@@ -49,43 +49,6 @@ const DraggableMeal: React.FC<DraggableMealProps> = ({ meal, onClick, onDelete }
     opacity: isDragging ? 0.0 : 1, // Hide the original when dragging (we show the overlay instead)
   };
 
-  // --- Swipe Handlers ---
-  const handleTouchStart = (e: React.TouchEvent) => {
-    touchStartX.current = e.touches[0].clientX;
-    isSwiping.current = false;
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (touchStartX.current === null || isDragging) return;
-
-    const currentX = e.touches[0].clientX;
-    const diff = currentX - touchStartX.current;
-
-    // Only allow left swipe
-    if (diff < 0) {
-      isSwiping.current = true;
-      // Resistance effect: moving 1px feels like 0.8px
-      setOffsetX(Math.max(diff, -150)); 
-    }
-  };
-
-  const handleTouchEnd = () => {
-    touchStartX.current = null;
-    if (offsetX < -80) {
-       // Threshold met - Trigger delete
-       // Animate off screen first for visual feedback
-       setOffsetX(-400); 
-       setTimeout(() => {
-           onDelete();
-           setOffsetX(0); // Reset for next mount if component reused
-       }, 300);
-    } else {
-       // Snap back
-       setOffsetX(0);
-    }
-    setTimeout(() => { isSwiping.current = false; }, 100);
-  };
-
   return (
     <div className="relative touch-pan-y" style={style}>
         {/* Red Delete Background Layer 
@@ -99,16 +62,59 @@ const DraggableMeal: React.FC<DraggableMealProps> = ({ meal, onClick, onDelete }
         {/* Foreground Card */}
         <div 
             ref={setNodeRef} 
-            {...listeners} 
             {...attributes}
-            // Swipe Events
-            onTouchStart={handleTouchStart}
-            onTouchMove={handleTouchMove}
-            onTouchEnd={handleTouchEnd}
+            // We spread listeners first, then override touch events to merge logic
+            {...listeners}
+            
+            // Merged Swipe + Drag Logic
+            onTouchStart={(e) => {
+                // 1. Swipe Init
+                touchStartX.current = e.touches[0].clientX;
+                isSwiping.current = false;
+                
+                // 2. DndKit Listener (Required for TouchSensor delay timer)
+                listeners?.onTouchStart?.(e);
+            }}
+            onTouchMove={(e) => {
+                // 1. Swipe Move
+                if (touchStartX.current !== null && !isDragging) {
+                    const currentX = e.touches[0].clientX;
+                    const diff = currentX - touchStartX.current;
+                    // Only process left swipes
+                    if (diff < 0) {
+                        isSwiping.current = true;
+                        setOffsetX(Math.max(diff, -150)); 
+                    }
+                }
+                
+                // 2. DndKit Listener
+                listeners?.onTouchMove?.(e);
+            }}
+            onTouchEnd={(e) => {
+                // 1. Swipe End
+                touchStartX.current = null;
+                if (offsetX < -80) {
+                   // Threshold met
+                   setOffsetX(-400); 
+                   setTimeout(() => {
+                       onDelete();
+                       setOffsetX(0);
+                   }, 300);
+                } else {
+                   // Snap back
+                   setOffsetX(0);
+                }
+                setTimeout(() => { isSwiping.current = false; }, 100);
+                
+                // 2. DndKit Listener
+                listeners?.onTouchEnd?.(e);
+            }}
+            
+            // Prevent Click if Swiping
             onClick={(e) => {
-                // Prevent click if we were swiping
                 if (!isSwiping.current) onClick();
             }}
+
             style={{ 
                 transform: `translateX(${offsetX}px)`, 
                 transition: isSwiping.current ? 'none' : 'transform 0.3s ease-out' 
