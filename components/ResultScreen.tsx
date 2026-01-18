@@ -22,6 +22,15 @@ const ResultScreen: React.FC<ResultScreenProps> = ({ image, onSave, onRetake, on
   useEffect(() => {
     let active = true;
 
+    // Safety timeout: Ensure we never spin forever in the UI
+    const safetyTimer = setTimeout(() => {
+      if (active && loading) {
+        console.error("UI Safety Timeout Triggered");
+        setError(t('camera_error'));
+        setLoading(false);
+      }
+    }, 30000); // 30 seconds absolute max
+
     const analyze = async () => {
       if (!image) {
         setLoading(false);
@@ -33,12 +42,14 @@ const ResultScreen: React.FC<ResultScreenProps> = ({ image, onSave, onRetake, on
         setLoading(true);
         setError(null);
         
-        // Call the real AI service
+        // Call the service (which has its own internal timeouts now)
         const result = await analyzeFoodImage(image);
         
         if (active) {
           // If confidence is too low (e.g. not food), treat as error/fallback
+          // Threshold set to 40 to be permissive
           if (result.confidence < 40) {
+             console.warn("Low confidence result:", result);
              throw new Error("Could not identify food in image");
           }
           setAnalysis(result);
@@ -47,7 +58,7 @@ const ResultScreen: React.FC<ResultScreenProps> = ({ image, onSave, onRetake, on
       } catch (err) {
         console.error("Analysis failed", err);
         if (active) {
-          setError(t('camera_error')); // Or a more specific AI error message
+          setError(t('camera_error'));
           setLoading(false);
         }
       }
@@ -55,7 +66,10 @@ const ResultScreen: React.FC<ResultScreenProps> = ({ image, onSave, onRetake, on
 
     analyze();
 
-    return () => { active = false; };
+    return () => { 
+      active = false; 
+      clearTimeout(safetyTimer);
+    };
   }, [image, t]);
 
   const handleSave = () => {
@@ -72,7 +86,7 @@ const ResultScreen: React.FC<ResultScreenProps> = ({ image, onSave, onRetake, on
       fat: analysis.fat,
       sugar: analysis.sugar,
       imageUrl: image || undefined,
-      type: 'Snack' // Default type, user can edit later
+      type: 'Snack' // Default type
     };
 
     addMeal(newMeal);
@@ -84,13 +98,13 @@ const ResultScreen: React.FC<ResultScreenProps> = ({ image, onSave, onRetake, on
 
   if (error) {
     return (
-      <div className="bg-background-light dark:bg-background-dark min-h-screen flex flex-col items-center justify-center p-6 text-center">
-        <div className="size-20 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center mb-4">
-            <span className="material-symbols-outlined text-red-500 text-4xl">warning</span>
+      <div className="bg-background-light dark:bg-background-dark min-h-screen flex flex-col items-center justify-center p-6 text-center animate-enter">
+        <div className="size-24 bg-red-50 dark:bg-red-900/20 rounded-full flex items-center justify-center mb-6 shadow-sm">
+            <span className="material-symbols-outlined text-red-500 text-5xl">warning</span>
         </div>
-        <h2 className="text-xl font-bold text-neutral-900 dark:text-white mb-2">Could not identify food</h2>
-        <p className="text-neutral-500 dark:text-neutral-400 mb-8 max-w-xs">
-          The AI couldn't detect a clear food item in this picture.
+        <h2 className="text-xl font-bold text-neutral-900 dark:text-white mb-2">{t('ai_error')}</h2>
+        <p className="text-neutral-500 dark:text-neutral-400 mb-8 max-w-xs text-sm leading-relaxed">
+           The AI couldn't reliably identify the food. This can happen with blurry images or non-food items.
         </p>
         
         <button 
@@ -103,7 +117,7 @@ const ResultScreen: React.FC<ResultScreenProps> = ({ image, onSave, onRetake, on
         
         <button 
           onClick={onRetake}
-          className="w-full max-w-xs h-14 bg-transparent border border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-300 font-bold rounded-2xl hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-all active:scale-[0.98]"
+          className="w-full max-w-xs h-14 bg-white dark:bg-surface-dark border border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-300 font-bold rounded-2xl hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-all active:scale-[0.98]"
         >
           {t('retake')}
         </button>
@@ -136,15 +150,15 @@ const ResultScreen: React.FC<ResultScreenProps> = ({ image, onSave, onRetake, on
       <main className="flex-1 flex flex-col max-w-3xl mx-auto w-full px-5 pb-32 animate-enter">
         {/* Hero Image Section */}
         <div className="mt-2 mb-6">
-          <div className="w-full aspect-[4/3] bg-neutral-100 rounded-2xl overflow-hidden shadow-soft relative group">
+          <div className="w-full aspect-[4/3] bg-neutral-100 dark:bg-neutral-800 rounded-2xl overflow-hidden shadow-soft relative group">
             <div 
               className="absolute inset-0 bg-cover bg-center" 
               style={{backgroundImage: `url("${displayImage}")`}}
             ></div>
             {loading && (
-                <div className="absolute inset-0 bg-black/40 backdrop-blur-sm flex flex-col items-center justify-center text-white">
+                <div className="absolute inset-0 bg-black/40 backdrop-blur-md flex flex-col items-center justify-center text-white">
                     <div className="size-12 border-4 border-white/30 border-t-white rounded-full animate-spin mb-4"></div>
-                    <p className="font-semibold animate-pulse">{t('analyzing')}</p>
+                    <p className="font-semibold animate-pulse tracking-wide">{t('analyzing')}</p>
                 </div>
             )}
             <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent pointer-events-none"></div>
@@ -153,7 +167,7 @@ const ResultScreen: React.FC<ResultScreenProps> = ({ image, onSave, onRetake, on
 
         {/* Loading Skeleton or Result */}
         {loading ? (
-           <div className="space-y-6 animate-pulse">
+           <div className="space-y-6 animate-pulse opacity-50">
               <div className="flex flex-col items-center gap-2">
                  <div className="h-8 w-48 bg-neutral-200 dark:bg-neutral-800 rounded-full"></div>
                  <div className="h-16 w-32 bg-neutral-200 dark:bg-neutral-800 rounded-2xl"></div>

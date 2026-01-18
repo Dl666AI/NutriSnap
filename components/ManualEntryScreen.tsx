@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useData } from '../contexts/DataContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { Meal } from '../types';
@@ -26,6 +26,11 @@ const ManualEntryScreen: React.FC<ManualEntryScreenProps> = ({ onSave, onCancel,
   const [description, setDescription] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
+
+  // Safety cleanup for loading state
+  useEffect(() => {
+    return () => setIsGenerating(false);
+  }, []);
 
   const handleSave = () => {
     // Preserve existing data if editing, especially properties not in this form (like fat/carbs/image)
@@ -68,20 +73,20 @@ const ManualEntryScreen: React.FC<ManualEntryScreenProps> = ({ onSave, onCancel,
     setAiError(null);
 
     try {
+      // Analyze with service
       const result = await analyzeFoodText(description);
       
-      if (result.confidence > 50) {
+      // Check confidence (threshold 50 is reasonable given prompt instructions ask for 90 or 0)
+      if (result && result.confidence > 50) {
         setName(result.name);
         setCalories(result.calories.toString());
         setProtein(result.protein.toString());
         setSugar(result.sugar.toString());
-        // Note: fat and carbs are returned by API but not currently exposed in this specific form UI
-        // In a real app, we would likely add fields for them or store them in hidden state to save
       } else {
         setAiError(t('ai_error'));
       }
     } catch (err) {
-      console.error(err);
+      console.error("Autofill failed", err);
       setAiError(t('ai_error'));
     } finally {
       setIsGenerating(false);

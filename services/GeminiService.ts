@@ -11,7 +11,6 @@ export interface FoodAnalysisResult {
 }
 
 // Initialize client-side fallback
-// We use optional chaining or default to empty string to prevent crash if env is missing
 const apiKey = process.env.API_KEY || '';
 const clientAI = new GoogleGenAI({ apiKey });
 
@@ -29,14 +28,33 @@ const RESPONSE_SCHEMA = {
   required: ["name", "calories", "protein", "carbs", "fat", "sugar", "confidence"]
 };
 
+// Helper: strictly enforce timeout on any promise
+function withTimeout<T>(promise: Promise<T>, ms: number, errorMsg: string): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error(errorMsg));
+    }, ms);
+
+    promise
+      .then((val) => {
+        clearTimeout(timer);
+        resolve(val);
+      })
+      .catch((err) => {
+        clearTimeout(timer);
+        reject(err);
+      });
+  });
+}
+
 /**
- * Helper to perform client-side analysis using Gemini SDK directly in browser.
+ * Client-side analysis using Gemini SDK directly in browser.
  */
 async function performClientSideAnalysis(
   input: { type: 'image', data: string } | { type: 'text', data: string }
 ): Promise<FoodAnalysisResult> {
   if (!apiKey) {
-    throw new Error("Missing API Key for client-side fallback. Please check your .env configuration.");
+    throw new Error("Client-side fallback unavailable: Missing API Key.");
   }
 
   try {
@@ -52,17 +70,20 @@ async function performClientSideAnalysis(
           }
         },
         {
-          text: `Analyze this image. Identify the food item and estimate its nutritional content for a standard serving size. 
-                 Be realistic with calorie estimates. If it is not food, return a low confidence score.`
+          text: `Identify this food. Estimate calories/macros for a standard serving. 
+                 If it is food, set confidence to 90.
+                 If it is NOT food, set confidence to 0.
+                 Return JSON.`
         }
       ];
     } else {
       promptParts = [
         {
           text: `Analyze this food description: "${input.data}". 
-                 Identify the most likely food item(s) and estimate nutritional content.
-                 Return specific numbers for calories, protein, carbs, fat, and sugar based on standard serving sizes.
-                 Be realistic. If the text is gibberish or not food, return low confidence.`
+                 Estimate calories and macros.
+                 If valid food, set confidence to 90.
+                 If gibberish, set confidence 0.
+                 Return JSON.`
         }
       ];
     }
@@ -87,45 +108,75 @@ async function performClientSideAnalysis(
 }
 
 export async function analyzeFoodImage(base64Image: string): Promise<FoodAnalysisResult> {
-  // 1. Try Server API
+  // We wrap the entire process (Server Attempt + Potential Client Fallback) in one flow
+  // but we time-box each step.
+
+  let serverError: Error | null = null;
+
+  // 1. Try Server API (Timeout: 20s)
   try {
-    const response = await fetch('/api/analyze/image', {
+    const serverPromise = fetch('/api/analyze/image', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ image: base64Image }),
+    }).then(async (res) => {
+      if (!res.ok) throw new Error(`Server status: ${res.status}`);
+      return await res.json();
     });
 
-    if (response.ok) {
-      return await response.json();
-    }
-    // If we get here, server exists but failed (e.g. 500) OR route missing (404)
-    console.warn(`Backend API returned ${response.status}, switching to Client SDK.`);
-  } catch (error) {
-    // If we get here, network failed (e.g. server offline, CORS)
-    console.warn("Backend API unreachable, switching to Client SDK.", error);
+    return await withTimeout(serverPromise, 20000, "Server request timed out");
+  } catch (error: any) {
+    console.warn("Server API failed:", error);
+    serverError = error;
   }
 
-  // 2. Client-Side Fallback (Executed if server block failed/skipped)
-  return performClientSideAnalysis({ type: 'image', data: base64Image });
+  // 2. Client-Side Fallback (Timeout: 15s)
+  // Only attempt if we have a key. If not, throw the Server Error to be helpful.
+  if (!apiKey) {
+    console.error("No client API key found. Cannot fallback.");
+    throw serverError || new Error("Server failed and no client key available.");
+  }
+
+  try {
+    const clientPromise = performClientSideAnalysis({ type: 'image', data: base64Image });
+    return await withTimeout(clientPromise, 15000, "Client fallback timed out");
+  } catch (clientError) {
+    console.error("Client fallback failed:", clientError);
+    // Throw the initial server error if it exists, as it's usually the root cause in prod
+    throw serverError || clientError;
+  }
 }
 
 export async function analyzeFoodText(description: string): Promise<FoodAnalysisResult> {
-  // 1. Try Server API
+  let serverError: Error | null = null;
+
+  // 1. Try Server API (Timeout: 10s)
   try {
-    const response = await fetch('/api/analyze/text', {
+    const serverPromise = fetch('/api/analyze/text', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ description }),
+    }).then(async (res) => {
+      if (!res.ok) throw new Error(`Server status: ${res.status}`);
+      return await res.json();
     });
 
-    if (response.ok) {
-      return await response.json();
-    }
-    console.warn(`Backend API returned ${response.status}, switching to Client SDK.`);
-  } catch (error) {
-    console.warn("Backend API unreachable, switching to Client SDK.", error);
+    return await withTimeout(serverPromise, 10000, "Server request timed out");
+  } catch (error: any) {
+    console.warn("Server API failed:", error);
+    serverError = error;
   }
 
-  // 2. Client-Side Fallback
-  return performClientSideAnalysis({ type: 'text', data: description });
+  // 2. Client-Side Fallback (Timeout: 10s)
+  if (!apiKey) {
+    throw serverError || new Error("Server failed and no client key available.");
+  }
+
+  try {
+    const clientPromise = performClientSideAnalysis({ type: 'text', data: description });
+    return await withTimeout(clientPromise, 10000, "Client fallback timed out");
+  } catch (clientError) {
+    console.error("Client fallback failed:", clientError);
+    throw serverError || clientError;
+  }
 }
