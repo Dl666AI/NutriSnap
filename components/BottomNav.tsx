@@ -36,7 +36,7 @@ const BottomNav: React.FC<BottomNavProps> = ({ currentScreen, onNavigate, onCame
 
       {/* Bottom Navigation Bar */}
       <nav className="bg-white/90 dark:bg-background-dark/95 backdrop-blur-md border-t border-neutral-100 dark:border-neutral-800 pb-[env(safe-area-inset-bottom,20px)] pt-2 px-6 h-[80px]">
-        <div className="flex items-center justify-between h-full max-w-md mx-auto">
+        <div className="flex items-center justify-between h-full max-w-3xl mx-auto">
           {/* Left Icons */}
           <div className="flex items-center gap-8 pl-2">
             <button 

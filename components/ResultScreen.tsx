@@ -115,7 +115,7 @@ const ResultScreen: React.FC<ResultScreenProps> = ({ image, onSave, onRetake, on
     <div className="bg-background-light dark:bg-background-dark font-display text-text-dark antialiased overflow-x-hidden min-h-screen flex flex-col transition-colors duration-300">
       {/* Top Navigation */}
       <header className="sticky top-0 z-50 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md">
-        <div className="flex items-center p-4 justify-between max-w-md mx-auto w-full">
+        <div className="flex items-center p-4 justify-between max-w-3xl mx-auto w-full">
           <button 
             onClick={onSave} 
             className="flex size-10 shrink-0 items-center justify-center rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors text-text-dark dark:text-white"
@@ -133,7 +133,7 @@ const ResultScreen: React.FC<ResultScreenProps> = ({ image, onSave, onRetake, on
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col max-w-md mx-auto w-full px-5 pb-32 animate-enter">
+      <main className="flex-1 flex flex-col max-w-3xl mx-auto w-full px-5 pb-32 animate-enter">
         {/* Hero Image Section */}
         <div className="mt-2 mb-6">
           <div className="w-full aspect-[4/3] bg-neutral-100 rounded-2xl overflow-hidden shadow-soft relative group">

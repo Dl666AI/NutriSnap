@@ -37,7 +37,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigate, user, onEdit, onFab
   const gradientString = `conic-gradient(#9cab8c 0% ${progressPercent}%, #F8DDA4 ${progressPercent}% 100%)`;
 
   return (
-    <div className="relative flex h-full min-h-screen w-full flex-col max-w-md mx-auto bg-background-light dark:bg-background-dark pb-32 transition-colors duration-300">
+    <div className="relative flex h-full min-h-screen w-full flex-col max-w-3xl mx-auto bg-background-light dark:bg-background-dark pb-32 transition-colors duration-300">
       {/* Header */}
       <header className="flex items-center justify-between px-6 pt-6 pb-2">
         <div className="flex items-center gap-3">

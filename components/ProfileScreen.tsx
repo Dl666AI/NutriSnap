@@ -24,6 +24,139 @@ interface ProfileScreenProps {
   onFabClick: () => void;
 }
 
+const SettingsSheet = ({ theme, setTheme, language, setLanguage, onClose, onLogout, isLoggedIn }: any) => {
+    const { t } = useLanguage();
+    
+    return (
+        <div className="fixed inset-0 z-[100] flex flex-col justify-end font-display">
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onClick={onClose}></div>
+            <div className="relative bg-surface-light dark:bg-surface-dark rounded-t-[2.5rem] p-6 pb-10 w-full max-w-3xl mx-auto animate-[float-up_0.3s_ease-out] shadow-2xl border-t border-white/20 dark:border-neutral-700">
+                <div className="w-12 h-1.5 bg-neutral-300 dark:bg-neutral-600 rounded-full mx-auto mb-6"></div>
+                <h2 className="text-xl font-bold text-neutral-900 dark:text-white mb-6 px-2">{t('settings')}</h2>
+                
+                <div className="space-y-4">
+                    {/* Theme Toggle */}
+                    <div className="flex items-center justify-between p-4 bg-white dark:bg-neutral-800 rounded-2xl border border-neutral-100 dark:border-neutral-700">
+                        <div className="flex items-center gap-3">
+                            <div className="size-10 rounded-full bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+                                <span className="material-symbols-outlined">palette</span>
+                            </div>
+                            <span className="font-bold text-neutral-800 dark:text-white">{t('appearance')}</span>
+                        </div>
+                        <div className="flex bg-neutral-100 dark:bg-neutral-900 rounded-lg p-1">
+                            {(['light', 'system', 'dark'] as Theme[]).map((m) => (
+                                <button
+                                    key={m}
+                                    onClick={() => setTheme(m)}
+                                    className={`px-3 py-1.5 rounded-md text-xs font-bold capitalize transition-all ${theme === m ? 'bg-white dark:bg-neutral-700 shadow-sm text-neutral-900 dark:text-white' : 'text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300'}`}
+                                >
+                                    {m}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Language Toggle */}
+                    <div className="flex items-center justify-between p-4 bg-white dark:bg-neutral-800 rounded-2xl border border-neutral-100 dark:border-neutral-700">
+                         <div className="flex items-center gap-3">
+                            <div className="size-10 rounded-full bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 flex items-center justify-center">
+                                <span className="material-symbols-outlined">language</span>
+                            </div>
+                            <span className="font-bold text-neutral-800 dark:text-white">{t('language')}</span>
+                        </div>
+                        <div className="flex bg-neutral-100 dark:bg-neutral-900 rounded-lg p-1">
+                             <button
+                                onClick={() => setLanguage('en')}
+                                className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${language === 'en' ? 'bg-white dark:bg-neutral-700 shadow-sm text-neutral-900 dark:text-white' : 'text-neutral-500'}`}
+                             >
+                                English
+                             </button>
+                             <button
+                                onClick={() => setLanguage('zh')}
+                                className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${language === 'zh' ? 'bg-white dark:bg-neutral-700 shadow-sm text-neutral-900 dark:text-white' : 'text-neutral-500'}`}
+                             >
+                                中文
+                             </button>
+                        </div>
+                    </div>
+
+                    {isLoggedIn && (
+                        <button 
+                            onClick={onLogout}
+                            className="w-full p-4 mt-4 flex items-center justify-center gap-2 text-red-500 font-bold bg-red-50 dark:bg-red-900/10 hover:bg-red-100 dark:hover:bg-red-900/20 rounded-2xl transition-colors"
+                        >
+                            <span className="material-symbols-outlined">logout</span>
+                            {t('sign_out')}
+                        </button>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+const EditProfileModal = ({ user, onClose, onSave }: { user: User, onClose: () => void, onSave: (u: User) => void }) => {
+    const { t } = useLanguage();
+    const [weight, setWeight] = useState<number | string>(user.weight || '');
+    const [height, setHeight] = useState<number | string>(user.height || '');
+    const [age, setAge] = useState<number | string>(user.age || '');
+    const [calories, setCalories] = useState<number | string>(user.dailyCalories || 2000);
+
+    const handleSave = () => {
+        onSave({
+            ...user,
+            weight: Number(weight),
+            height: Number(height),
+            age: Number(age),
+            dailyCalories: Number(calories)
+        });
+        onClose();
+    };
+
+    return (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 font-display">
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onClick={onClose}></div>
+            <div className="relative bg-white dark:bg-surface-dark w-full max-w-sm rounded-[2rem] p-6 shadow-2xl animate-enter">
+                <div className="flex justify-between items-center mb-6">
+                    <h3 className="text-xl font-bold text-neutral-900 dark:text-white">{t('edit')} {t('my_stats')}</h3>
+                    <button onClick={onClose} className="p-2 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800">
+                        <span className="material-symbols-outlined text-neutral-500">close</span>
+                    </button>
+                </div>
+                
+                <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                         <div className="space-y-1">
+                            <label className="text-xs font-bold text-neutral-500 uppercase">{t('weight')} (kg)</label>
+                            <input type="number" value={weight} onChange={e => setWeight(e.target.value)} className="w-full h-12 px-4 rounded-xl bg-neutral-100 dark:bg-neutral-800 border-none font-bold text-neutral-900 dark:text-white" />
+                         </div>
+                         <div className="space-y-1">
+                            <label className="text-xs font-bold text-neutral-500 uppercase">{t('height')} (cm)</label>
+                            <input type="number" value={height} onChange={e => setHeight(e.target.value)} className="w-full h-12 px-4 rounded-xl bg-neutral-100 dark:bg-neutral-800 border-none font-bold text-neutral-900 dark:text-white" />
+                         </div>
+                    </div>
+                    <div className="space-y-1">
+                        <label className="text-xs font-bold text-neutral-500 uppercase">{t('age')}</label>
+                        <input type="number" value={age} onChange={e => setAge(e.target.value)} className="w-full h-12 px-4 rounded-xl bg-neutral-100 dark:bg-neutral-800 border-none font-bold text-neutral-900 dark:text-white" />
+                    </div>
+                    <div className="space-y-1">
+                        <label className="text-xs font-bold text-neutral-500 uppercase">{t('daily_targets')} (kcal)</label>
+                        <input type="number" value={calories} onChange={e => setCalories(e.target.value)} className="w-full h-12 px-4 rounded-xl bg-neutral-100 dark:bg-neutral-800 border-none font-bold text-neutral-900 dark:text-white" />
+                    </div>
+
+                    <button 
+                        onClick={handleSave}
+                        className="w-full h-14 mt-4 bg-primary text-white font-bold rounded-2xl hover:bg-primary-dark transition-colors flex items-center justify-center gap-2"
+                    >
+                        <span className="material-symbols-outlined">save</span>
+                        {t('save_changes')}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 const ProfileScreen: React.FC<ProfileScreenProps> = ({ 
     onNavigate, 
     user, 
@@ -162,7 +295,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({
   // Logged-out Login View
   if (!user) {
     return (
-      <div className="relative flex h-full min-h-screen w-full flex-col max-w-md mx-auto bg-background-light dark:bg-background-dark pb-32 transition-colors duration-300">
+      <div className="relative flex h-full min-h-screen w-full flex-col max-w-3xl mx-auto bg-background-light dark:bg-background-dark pb-32 transition-colors duration-300">
         <header className="flex items-center justify-end px-6 pt-8 pb-4">
           <button 
             onClick={toggleSettings}
@@ -271,7 +404,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({
 
   // Logged-in Profile View
   return (
-    <div className="relative flex h-full min-h-screen w-full flex-col max-w-md mx-auto bg-background-light dark:bg-background-dark pb-32 transition-colors duration-300">
+    <div className="relative flex h-full min-h-screen w-full flex-col max-w-3xl mx-auto bg-background-light dark:bg-background-dark pb-32 transition-colors duration-300">
       {/* Header Section */}
       <header className="flex items-center justify-between px-6 pt-8 pb-4 bg-background-light dark:bg-background-dark sticky top-0 z-20">
         <div className="flex items-center gap-4">
@@ -431,432 +564,27 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({
         </div>
       </section>
 
-      {/* Settings Bottom Sheet Integration */}
-      {isSettingsOpen && <SettingsSheet theme={theme} setTheme={setTheme} language={language} setLanguage={setLanguage} onClose={toggleSettings} onLogout={onLogout} isLoggedIn={true} />}
-
-      {/* Edit Profile Sheet */}
-      {isEditProfileOpen && (
-          <EditProfileSheet 
-            user={user} 
-            onClose={toggleEditProfile} 
-            onSave={(u) => { onUpdateUser(u); toggleEditProfile(); }} 
+      {/* Settings Modal */}
+      {isSettingsOpen && (
+          <SettingsSheet 
+             theme={theme} 
+             setTheme={setTheme} 
+             language={language} 
+             setLanguage={setLanguage} 
+             onClose={toggleSettings} 
+             onLogout={onLogout}
+             isLoggedIn={true}
           />
       )}
 
-      <BottomNav 
-        currentScreen="PROFILE" 
-        onNavigate={onNavigate} 
-        onCameraClick={onFabClick} 
-      />
+      {/* Edit Profile Modal */}
+      {isEditProfileOpen && (
+          <EditProfileModal user={user} onClose={toggleEditProfile} onSave={onUpdateUser} />
+      )}
+
+      <BottomNav currentScreen="PROFILE" onNavigate={onNavigate} onCameraClick={onFabClick} />
     </div>
   );
 };
-
-// Reusable Settings Sheet Component
-interface SettingsSheetProps {
-  theme: Theme;
-  setTheme: (t: Theme) => void;
-  language: Language;
-  setLanguage: (l: Language) => void;
-  onClose: () => void;
-  onLogout: () => void;
-  isLoggedIn: boolean;
-}
-
-const SettingsSheet: React.FC<SettingsSheetProps> = ({ theme, setTheme, language, setLanguage, onClose, onLogout, isLoggedIn }) => {
-  const { t } = useLanguage();
-  return (
-  <div className="fixed inset-0 z-[100] flex flex-col justify-end">
-    <div className="absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity" onClick={onClose}></div>
-    <div className="relative bg-white dark:bg-background-dark rounded-t-3xl p-6 shadow-2xl animate-enter border-t border-neutral-100 dark:border-neutral-800 max-w-md mx-auto w-full">
-      <div className="flex items-center justify-between mb-6">
-         <h2 className="text-xl font-bold text-neutral-900 dark:text-white">{t('settings')}</h2>
-         <button onClick={onClose} className="p-2 -mr-2 text-neutral-500">
-            <span className="material-symbols-outlined">close</span>
-         </button>
-      </div>
-      <div className="space-y-6">
-        
-        {/* Language Section */}
-        <div>
-          <h3 className="text-sm font-semibold text-neutral-500 uppercase tracking-wider mb-3">{t('language')}</h3>
-          <div className="bg-surface-light dark:bg-surface-dark rounded-2xl p-2 space-y-1">
-            <button 
-                onClick={() => setLanguage('en')}
-                className={`w-full flex items-center justify-between p-3 rounded-xl transition-colors ${language === 'en' ? 'bg-white dark:bg-neutral-800 shadow-sm' : 'hover:bg-white/50 dark:hover:bg-neutral-800/50'}`}
-            >
-                <div className="flex items-center gap-3">
-                  <div className={`size-8 rounded-full flex items-center justify-center ${language === 'en' ? 'bg-primary text-white' : 'bg-neutral-200 dark:bg-neutral-700 text-neutral-500 dark:text-neutral-400'}`}>
-                     <span className="text-xs font-bold">EN</span>
-                  </div>
-                  <span className="font-medium text-neutral-900 dark:text-white">English</span>
-                </div>
-                {language === 'en' && <span className="material-symbols-outlined text-primary">check_circle</span>}
-            </button>
-            <button 
-                onClick={() => setLanguage('zh')}
-                className={`w-full flex items-center justify-between p-3 rounded-xl transition-colors ${language === 'zh' ? 'bg-white dark:bg-neutral-800 shadow-sm' : 'hover:bg-white/50 dark:hover:bg-neutral-800/50'}`}
-            >
-                <div className="flex items-center gap-3">
-                  <div className={`size-8 rounded-full flex items-center justify-center ${language === 'zh' ? 'bg-primary text-white' : 'bg-neutral-200 dark:bg-neutral-700 text-neutral-500 dark:text-neutral-400'}`}>
-                     <span className="text-xs font-bold">ZH</span>
-                  </div>
-                  <span className="font-medium text-neutral-900 dark:text-white">中文</span>
-                </div>
-                {language === 'zh' && <span className="material-symbols-outlined text-primary">check_circle</span>}
-            </button>
-          </div>
-        </div>
-
-        <div>
-          <h3 className="text-sm font-semibold text-neutral-500 uppercase tracking-wider mb-3">{t('appearance')}</h3>
-          <div className="bg-surface-light dark:bg-surface-dark rounded-2xl p-2 space-y-1">
-            {['system', 'light', 'dark'].map((tVal) => (
-              <button 
-                key={tVal}
-                onClick={() => setTheme(tVal as Theme)}
-                className={`w-full flex items-center justify-between p-3 rounded-xl transition-colors ${theme === tVal ? 'bg-white dark:bg-neutral-800 shadow-sm' : 'hover:bg-white/50 dark:hover:bg-neutral-800/50'}`}
-              >
-                <div className="flex items-center gap-3">
-                  <div className={`size-8 rounded-full flex items-center justify-center ${theme === tVal ? 'bg-primary text-white' : 'bg-neutral-200 dark:bg-neutral-700 text-neutral-500 dark:text-neutral-400'}`}>
-                     <span className="material-symbols-outlined text-lg">
-                        {tVal === 'system' ? 'settings_brightness' : tVal === 'light' ? 'light_mode' : 'dark_mode'}
-                     </span>
-                  </div>
-                  <span className="font-medium text-neutral-900 dark:text-white capitalize">
-                    {tVal === 'system' ? `${t('appearance')} (Auto)` : `${tVal} Mode`}
-                  </span>
-                </div>
-                {theme === tVal && <span className="material-symbols-outlined text-primary">check_circle</span>}
-              </button>
-            ))}
-          </div>
-        </div>
-        
-        {isLoggedIn && (
-          <div className="pt-2">
-            <button 
-              onClick={() => { onLogout(); onClose(); }}
-              className="w-full flex items-center gap-3 p-4 rounded-2xl text-red-500 bg-red-50 dark:bg-red-900/10 font-bold hover:bg-red-100 transition-colors"
-            >
-              <span className="material-symbols-outlined">logout</span>
-              {t('sign_out')}
-            </button>
-          </div>
-        )}
-
-        <div className="pt-2 text-center">
-           <p className="text-xs text-neutral-400">NutriSnap v1.1.0</p>
-        </div>
-      </div>
-    </div>
-  </div>
-)};
-
-// ------------------------------------------------------------------
-// CALCULATOR FORMULAS
-// ------------------------------------------------------------------
-
-interface UserInput {
-  age: number;        // Years
-  gender: 'male' | 'female';
-  height: number;     // Centimeters
-  weight: number;     // Kilograms
-}
-
-interface NutritionalOutput {
-  dailyCalories: number; // kcal
-  dailyProtein: number;  // grams
-  maxDailySugar: number; // grams (Based on <10% total calories)
-}
-
-function calculateBMR(input: UserInput): number {
-  const { age, gender, height, weight } = input;
-  
-  // Base calculation
-  let bmr = (10 * weight) + (6.25 * height) - (5 * age);
-
-  // Gender adjustment
-  if (gender === 'male') {
-    bmr += 5;
-  } else {
-    bmr -= 161;
-  }
-
-  return bmr;
-}
-
-export function calculateForWeightLoss(input: UserInput): NutritionalOutput {
-  const bmr = calculateBMR(input);
-  const sedentaryTDEE = bmr * 1.2;
-  const targetCalories = Math.round(sedentaryTDEE - 500);
-  const targetProtein = Math.round(input.weight * 2.2);
-  const maxSugar = Math.round((targetCalories * 0.10) / 4);
-
-  return {
-    dailyCalories: Math.max(1200, targetCalories),
-    dailyProtein: targetProtein,
-    maxDailySugar: maxSugar,
-  };
-}
-
-export function calculateForMuscleGain(input: UserInput): NutritionalOutput {
-  const bmr = calculateBMR(input);
-  const sedentaryTDEE = bmr * 1.2;
-  const targetCalories = Math.round(sedentaryTDEE + 250);
-  const targetProtein = Math.round(input.weight * 2.0);
-  const maxSugar = Math.round((targetCalories * 0.10) / 4);
-
-  return {
-    dailyCalories: targetCalories,
-    dailyProtein: targetProtein,
-    maxDailySugar: maxSugar,
-  };
-}
-
-export function calculateForWeightGain(input: UserInput): NutritionalOutput {
-  const bmr = calculateBMR(input);
-  const sedentaryTDEE = bmr * 1.2;
-  const targetCalories = Math.round(sedentaryTDEE + 500);
-  const targetProtein = Math.round(input.weight * 1.8);
-  const maxSugar = Math.round((targetCalories * 0.10) / 4);
-
-  return {
-    dailyCalories: targetCalories,
-    dailyProtein: targetProtein,
-    maxDailySugar: maxSugar,
-  };
-}
-
-// ------------------------------------------------------------------
-// EDIT PROFILE COMPONENT
-// ------------------------------------------------------------------
-
-interface EditProfileSheetProps {
-    user: User;
-    onClose: () => void;
-    onSave: (updatedUser: User) => void;
-}
-
-const EditProfileSheet: React.FC<EditProfileSheetProps> = ({ user, onClose, onSave }) => {
-    const { t } = useLanguage();
-    const [weight, setWeight] = useState(user.weight?.toString() || '');
-    const [height, setHeight] = useState(user.height?.toString() || '');
-    const [age, setAge] = useState(user.age?.toString() || '');
-    
-    // New Fields
-    const [gender, setGender] = useState<'male'|'female'>(user.gender || 'male');
-    const [goal, setGoal] = useState<Goal>(user.goal || 'LOSS_WEIGHT');
-    
-    // Target fields (can be auto-calculated)
-    const [calories, setCalories] = useState(user.dailyCalories?.toString() || '2000');
-    const [protein, setProtein] = useState(user.dailyProtein?.toString() || '');
-    const [sugar, setSugar] = useState(user.dailySugar?.toString() || '50');
-
-    const handleCalculate = () => {
-        if (!weight || !height || !age) return;
-        
-        const input: UserInput = {
-            age: parseInt(age),
-            height: parseFloat(height),
-            weight: parseFloat(weight),
-            gender: gender
-        };
-
-        let result: NutritionalOutput;
-
-        if (goal === 'LOSS_WEIGHT') {
-            result = calculateForWeightLoss(input);
-        } else if (goal === 'GAIN_MUSCLE') {
-            result = calculateForMuscleGain(input);
-        } else if (goal === 'GAIN_WEIGHT') {
-            result = calculateForWeightGain(input);
-        } else {
-             // Maintenance/Fallback: Just use BMR * 1.2
-             const bmr = calculateBMR(input);
-             result = {
-                 dailyCalories: Math.round(bmr * 1.2),
-                 dailyProtein: Math.round(parseFloat(weight) * 1.0),
-                 maxDailySugar: 50
-             }
-        }
-
-        setCalories(result.dailyCalories.toString());
-        setProtein(result.dailyProtein.toString());
-        setSugar(result.maxDailySugar.toString());
-    };
-
-    const handleSave = () => {
-        onSave({
-            ...user,
-            weight: weight ? parseFloat(weight) : undefined,
-            height: height ? parseFloat(height) : undefined,
-            age: age ? parseInt(age) : undefined,
-            gender: gender,
-            goal: goal,
-            dailyCalories: calories ? parseInt(calories) : 2000,
-            dailyProtein: protein ? parseInt(protein) : undefined,
-            dailySugar: sugar ? parseInt(sugar) : 50,
-        });
-    };
-
-    return (
-        <div className="fixed inset-0 z-[100] flex flex-col justify-end">
-            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity" onClick={onClose}></div>
-            <div className="relative bg-white dark:bg-background-dark rounded-t-3xl p-6 shadow-2xl animate-enter border-t border-neutral-100 dark:border-neutral-800 max-w-md mx-auto w-full max-h-[90vh] overflow-y-auto">
-                <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-xl font-bold text-neutral-900 dark:text-white">{t('edit')}</h2>
-                    <button onClick={onClose} className="p-2 -mr-2 text-neutral-500">
-                        <span className="material-symbols-outlined">close</span>
-                    </button>
-                </div>
-
-                <div className="space-y-6">
-                    {/* Top Section: Goal & Gender */}
-                    <div className="space-y-4 p-4 bg-surface-light dark:bg-surface-dark rounded-2xl">
-                         {/* Gender Switch */}
-                         <div className="flex bg-white dark:bg-neutral-800 p-1 rounded-xl shadow-sm">
-                            <button 
-                                onClick={() => setGender('male')}
-                                className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${gender === 'male' ? 'bg-primary text-white shadow-sm' : 'text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200'}`}
-                            >
-                                {t('male')}
-                            </button>
-                            <button 
-                                onClick={() => setGender('female')}
-                                className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${gender === 'female' ? 'bg-primary text-white shadow-sm' : 'text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200'}`}
-                            >
-                                {t('female')}
-                            </button>
-                         </div>
-
-                         {/* Goal Selector */}
-                         <div className="space-y-2">
-                            <label className="text-xs font-bold uppercase tracking-wider text-neutral-400 ml-1">{t('current_goal')}</label>
-                            <div className="grid grid-cols-1 gap-2">
-                                <button 
-                                    onClick={() => setGoal('LOSS_WEIGHT')}
-                                    className={`px-4 py-3 rounded-xl border text-left flex items-center gap-3 transition-all ${goal === 'LOSS_WEIGHT' ? 'border-primary bg-primary/5 text-primary-dark dark:text-primary' : 'border-transparent bg-white dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300'}`}
-                                >
-                                    <span className="material-symbols-outlined">trending_down</span>
-                                    <span className="font-bold text-sm">{t('goal_lose')}</span>
-                                    {goal === 'LOSS_WEIGHT' && <span className="material-symbols-outlined ml-auto text-primary">check</span>}
-                                </button>
-                                <button 
-                                    onClick={() => setGoal('GAIN_MUSCLE')}
-                                    className={`px-4 py-3 rounded-xl border text-left flex items-center gap-3 transition-all ${goal === 'GAIN_MUSCLE' ? 'border-primary bg-primary/5 text-primary-dark dark:text-primary' : 'border-transparent bg-white dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300'}`}
-                                >
-                                    <span className="material-symbols-outlined">fitness_center</span>
-                                    <span className="font-bold text-sm">{t('goal_muscle')}</span>
-                                    {goal === 'GAIN_MUSCLE' && <span className="material-symbols-outlined ml-auto text-primary">check</span>}
-                                </button>
-                                <button 
-                                    onClick={() => setGoal('GAIN_WEIGHT')}
-                                    className={`px-4 py-3 rounded-xl border text-left flex items-center gap-3 transition-all ${goal === 'GAIN_WEIGHT' ? 'border-primary bg-primary/5 text-primary-dark dark:text-primary' : 'border-transparent bg-white dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300'}`}
-                                >
-                                    <span className="material-symbols-outlined">trending_up</span>
-                                    <span className="font-bold text-sm">{t('goal_gain')}</span>
-                                    {goal === 'GAIN_WEIGHT' && <span className="material-symbols-outlined ml-auto text-primary">check</span>}
-                                </button>
-                            </div>
-                         </div>
-                    </div>
-
-                    {/* Stats Input */}
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <label className="text-xs font-bold uppercase tracking-wider text-neutral-400 ml-1">{t('weight')} (kg)</label>
-                            <input 
-                                type="number" 
-                                value={weight}
-                                onChange={e => setWeight(e.target.value)}
-                                placeholder="0"
-                                className="w-full h-12 px-4 rounded-xl bg-surface-light dark:bg-surface-dark border-none focus:ring-2 focus:ring-primary/50 text-neutral-800 dark:text-white font-semibold"
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-xs font-bold uppercase tracking-wider text-neutral-400 ml-1">{t('height')} (cm)</label>
-                            <input 
-                                type="number" 
-                                value={height}
-                                onChange={e => setHeight(e.target.value)}
-                                placeholder="0"
-                                className="w-full h-12 px-4 rounded-xl bg-surface-light dark:bg-surface-dark border-none focus:ring-2 focus:ring-primary/50 text-neutral-800 dark:text-white font-semibold"
-                            />
-                        </div>
-                        <div className="space-y-2 col-span-2">
-                            <label className="text-xs font-bold uppercase tracking-wider text-neutral-400 ml-1">{t('age')}</label>
-                            <input 
-                                type="number" 
-                                value={age}
-                                onChange={e => setAge(e.target.value)}
-                                placeholder="0"
-                                className="w-full h-12 px-4 rounded-xl bg-surface-light dark:bg-surface-dark border-none focus:ring-2 focus:ring-primary/50 text-neutral-800 dark:text-white font-semibold"
-                            />
-                        </div>
-                    </div>
-
-                    {/* Auto-Calculate Button */}
-                    <button 
-                        onClick={handleCalculate}
-                        disabled={!weight || !height || !age}
-                        className="w-full py-3 rounded-xl border-2 border-dashed border-primary/30 text-primary font-bold hover:bg-primary/5 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
-                    >
-                        <span className="material-symbols-outlined">calculate</span>
-                        {t('recalculate')}
-                    </button>
-
-                    {/* Results Section */}
-                    <div className="space-y-4">
-                        <div className="flex items-center gap-2 mb-2">
-                            <span className="text-sm font-bold text-neutral-900 dark:text-white">{t('daily_targets')}</span>
-                            <div className="h-px bg-neutral-200 dark:bg-neutral-700 flex-1"></div>
-                        </div>
-
-                        <div className="space-y-2">
-                            <label className="text-xs font-bold uppercase tracking-wider text-neutral-400 ml-1">{t('total_calories')}</label>
-                            <input 
-                                type="number" 
-                                value={calories}
-                                onChange={e => setCalories(e.target.value)}
-                                className="w-full h-12 px-4 rounded-xl bg-surface-light dark:bg-surface-dark border-none focus:ring-2 focus:ring-primary/50 text-neutral-800 dark:text-white font-semibold"
-                            />
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <label className="text-xs font-bold uppercase tracking-wider text-neutral-400 ml-1">{t('protein')} (g)</label>
-                                <input 
-                                    type="number" 
-                                    value={protein}
-                                    onChange={e => setProtein(e.target.value)}
-                                    className="w-full h-12 px-4 rounded-xl bg-surface-light dark:bg-surface-dark border-none focus:ring-2 focus:ring-primary/50 text-neutral-800 dark:text-white font-semibold"
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <label className="text-xs font-bold uppercase tracking-wider text-neutral-400 ml-1">{t('max_sugar')} (g)</label>
-                                <input 
-                                    type="number" 
-                                    value={sugar}
-                                    onChange={e => setSugar(e.target.value)}
-                                    className="w-full h-12 px-4 rounded-xl bg-surface-light dark:bg-surface-dark border-none focus:ring-2 focus:ring-primary/50 text-neutral-800 dark:text-white font-semibold"
-                                />
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="pt-2">
-                        <button 
-                            onClick={handleSave}
-                            className="w-full h-14 bg-primary text-white font-bold rounded-2xl shadow-float hover:bg-primary-dark transition-all active:scale-[0.98]"
-                        >
-                            {t('save_changes')}
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
-}
 
 export default ProfileScreen;
