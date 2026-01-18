@@ -77,3 +77,55 @@ The project is structured to run directly in a browser environment using ESM imp
 *   **Root**: `index.html`
 *   **Entry**: `index.tsx`
 *   **Configurations**: `metadata.json` (Permissions) and `tailwind.config` (Theming).
+
+---
+
+## Local Development Setup
+
+Because this project uses **TypeScript** (`.tsx` files) and environment variables for the API key, it cannot run directly in a browser from the file system. You need a build tool. We recommend using **Vite**.
+
+### Prerequisites
+1.  **Node.js** (v18 or higher)
+2.  **Gemini API Key** from [Google AI Studio](https://aistudio.google.com/)
+
+### Step-by-Step Instructions
+
+1.  **Install Dependencies**
+    In the root directory of the project, install the required packages:
+    ```bash
+    npm install react react-dom @google/genai
+    npm install -D vite @vitejs/plugin-react typescript
+    ```
+
+2.  **Configure Environment Variables**
+    Create a file named `.env` in the root directory and add your API Key.
+    *Note: The code expects `process.env.API_KEY`.*
+    ```env
+    API_KEY=your_actual_api_key_here
+    ```
+
+3.  **Create Vite Config**
+    Create a file named `vite.config.ts` in the root directory. This config handles the React plugin and polyfills `process.env` so the SDK works correctly.
+    ```ts
+    import { defineConfig, loadEnv } from 'vite';
+    import react from '@vitejs/plugin-react';
+
+    export default defineConfig(({ mode }) => {
+      // Load env file based on `mode` in the current working directory.
+      const env = loadEnv(mode, process.cwd(), '');
+      return {
+        plugins: [react()],
+        define: {
+          // Polyfill process.env.API_KEY for the Gemini SDK usage
+          'process.env.API_KEY': JSON.stringify(env.API_KEY),
+        },
+      };
+    });
+    ```
+
+4.  **Run the App**
+    Start the local development server:
+    ```bash
+    npx vite
+    ```
+    Open the URL shown in your terminal (usually `http://localhost:5173`).
