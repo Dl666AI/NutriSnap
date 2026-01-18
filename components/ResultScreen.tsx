@@ -29,7 +29,7 @@ const ResultScreen: React.FC<ResultScreenProps> = ({ image, onSave, onRetake, on
         setError(t('camera_error'));
         setLoading(false);
       }
-    }, 30000); // 30 seconds absolute max
+    }, 60000); 
 
     const analyze = async () => {
       if (!image) {
@@ -42,23 +42,27 @@ const ResultScreen: React.FC<ResultScreenProps> = ({ image, onSave, onRetake, on
         setLoading(true);
         setError(null);
         
-        // Call the service (which has its own internal timeouts now)
         const result = await analyzeFoodImage(image);
         
         if (active) {
-          // If confidence is too low (e.g. not food), treat as error/fallback
-          // Threshold set to 40 to be permissive
-          if (result.confidence < 40) {
-             console.warn("Low confidence result:", result);
+          // Only reject if the model explicitly says confidence is 0 (meaning it's definitely not food)
+          // We accept anything > 0 to prefer showing a "best guess" over an error screen.
+          if (result.confidence === 0) {
+             console.warn("Model returned 0 confidence (Not Food):", result);
              throw new Error("Could not identify food in image");
           }
           setAnalysis(result);
           setLoading(false);
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error("Analysis failed", err);
         if (active) {
-          setError(t('camera_error'));
+          // Check for missing API key specifically to help developers/users
+          if (err.message && err.message.includes("API_KEY")) {
+             setError("Configuration Error: Missing API Key");
+          } else {
+             setError(t('camera_error'));
+          }
           setLoading(false);
         }
       }
@@ -97,14 +101,20 @@ const ResultScreen: React.FC<ResultScreenProps> = ({ image, onSave, onRetake, on
   const displayImage = image || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&q=80&w=200&h=200";
 
   if (error) {
+    const isConfigError = error.includes("API Key");
+    
     return (
       <div className="bg-background-light dark:bg-background-dark min-h-screen flex flex-col items-center justify-center p-6 text-center animate-enter">
         <div className="size-24 bg-red-50 dark:bg-red-900/20 rounded-full flex items-center justify-center mb-6 shadow-sm">
             <span className="material-symbols-outlined text-red-500 text-5xl">warning</span>
         </div>
-        <h2 className="text-xl font-bold text-neutral-900 dark:text-white mb-2">{t('ai_error')}</h2>
+        <h2 className="text-xl font-bold text-neutral-900 dark:text-white mb-2">
+            {isConfigError ? "Setup Required" : t('ai_error')}
+        </h2>
         <p className="text-neutral-500 dark:text-neutral-400 mb-8 max-w-xs text-sm leading-relaxed">
-           The AI couldn't reliably identify the food. This can happen with blurry images or non-food items.
+           {isConfigError 
+             ? "Please add your Gemini API Key to the .env file and restart." 
+             : "The AI couldn't reliably identify the food. This can happen with blurry images or non-food items."}
         </p>
         
         <button 

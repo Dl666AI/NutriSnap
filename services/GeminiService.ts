@@ -12,7 +12,6 @@ export interface FoodAnalysisResult {
 
 // Initialize client-side fallback
 const apiKey = process.env.API_KEY || '';
-const clientAI = new GoogleGenAI({ apiKey });
 
 const RESPONSE_SCHEMA = {
   type: Type.OBJECT,
@@ -47,6 +46,27 @@ function withTimeout<T>(promise: Promise<T>, ms: number, errorMsg: string): Prom
   });
 }
 
+// Helper: robust data URL parsing
+function parseDataUrl(dataUrl: string) {
+  const matches = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
+  if (matches && matches.length === 3) {
+    return { mimeType: matches[1], data: matches[2] };
+  }
+  // Fallback for raw base64 strings
+  return { mimeType: 'image/jpeg', data: dataUrl };
+}
+
+// Helper: Clean JSON string from potential markdown
+function parseJsonSafe(text: string): any {
+  try {
+    const cleanText = text.trim().replace(/^```json\s*/, "").replace(/\s*```$/, "");
+    return JSON.parse(cleanText);
+  } catch (e) {
+    console.error("JSON Parse Error:", e);
+    throw new Error("Failed to parse AI response");
+  }
+}
+
 /**
  * Client-side analysis using Gemini SDK directly in browser.
  */
@@ -57,23 +77,28 @@ async function performClientSideAnalysis(
     throw new Error("Client-side fallback unavailable: Missing API Key.");
   }
 
+  // Create instance here to ensure we use current key
+  const clientAI = new GoogleGenAI({ apiKey });
+
   try {
     let promptParts: any[] = [];
     
     if (input.type === 'image') {
-      const cleanBase64 = input.data.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, "");
+      const { mimeType, data } = parseDataUrl(input.data);
+      
       promptParts = [
         {
           inlineData: {
-            mimeType: 'image/jpeg',
-            data: cleanBase64
+            mimeType: mimeType,
+            data: data
           }
         },
         {
-          text: `Identify this food. Estimate calories/macros for a standard serving. 
-                 If it is food, set confidence to 90.
-                 If it is NOT food, set confidence to 0.
-                 Return JSON.`
+          text: `Identify this food item. Estimate calories and macros for a standard serving.
+                 - Always make a best-effort guess, even for packaged goods or unclear images.
+                 - Set confidence to 100 if you can identify ANY food, drink, or food packaging.
+                 - Only set confidence to 0 if the image is clearly a non-food object (like a shoe) or pitch black.
+                 Return strictly JSON.`
         }
       ];
     } else {
@@ -81,9 +106,10 @@ async function performClientSideAnalysis(
         {
           text: `Analyze this food description: "${input.data}". 
                  Estimate calories and macros.
-                 If valid food, set confidence to 90.
-                 If gibberish, set confidence 0.
-                 Return JSON.`
+                 - Always provide a result if the text describes something edible.
+                 - Set confidence to 100 for any valid food description.
+                 - Only set confidence to 0 for complete gibberish.
+                 Return strictly JSON.`
         }
       ];
     }
@@ -98,7 +124,7 @@ async function performClientSideAnalysis(
     });
 
     if (response.text) {
-      return JSON.parse(response.text) as FoodAnalysisResult;
+      return parseJsonSafe(response.text) as FoodAnalysisResult;
     }
     throw new Error("AI returned empty response");
   } catch (error) {
@@ -113,7 +139,8 @@ export async function analyzeFoodImage(base64Image: string): Promise<FoodAnalysi
 
   let serverError: Error | null = null;
 
-  // 1. Try Server API (Timeout: 20s)
+  // 1. Try Server API (Timeout: 10s)
+  // We keep this short because if dev server isn't running, we want to fail fast to client.
   try {
     const serverPromise = fetch('/api/analyze/image', {
       method: 'POST',
@@ -124,26 +151,26 @@ export async function analyzeFoodImage(base64Image: string): Promise<FoodAnalysi
       return await res.json();
     });
 
-    return await withTimeout(serverPromise, 20000, "Server request timed out");
+    return await withTimeout(serverPromise, 10000, "Server request timed out");
   } catch (error: any) {
-    console.warn("Server API failed:", error);
+    console.warn("Server API failed, attempting client fallback...", error.message);
     serverError = error;
   }
 
-  // 2. Client-Side Fallback (Timeout: 15s)
+  // 2. Client-Side Fallback (Timeout: 30s)
   // Only attempt if we have a key. If not, throw the Server Error to be helpful.
   if (!apiKey) {
     console.error("No client API key found. Cannot fallback.");
-    throw serverError || new Error("Server failed and no client key available.");
+    throw serverError || new Error("Server failed and no client API_KEY configured.");
   }
 
   try {
     const clientPromise = performClientSideAnalysis({ type: 'image', data: base64Image });
-    return await withTimeout(clientPromise, 15000, "Client fallback timed out");
-  } catch (clientError) {
+    return await withTimeout(clientPromise, 30000, "Client fallback timed out");
+  } catch (clientError: any) {
     console.error("Client fallback failed:", clientError);
-    // Throw the initial server error if it exists, as it's usually the root cause in prod
-    throw serverError || clientError;
+    // Prefer throwing the client error as it's the final attempt
+    throw clientError;
   }
 }
 
@@ -163,20 +190,20 @@ export async function analyzeFoodText(description: string): Promise<FoodAnalysis
 
     return await withTimeout(serverPromise, 10000, "Server request timed out");
   } catch (error: any) {
-    console.warn("Server API failed:", error);
+    console.warn("Server API failed, attempting client fallback...", error.message);
     serverError = error;
   }
 
-  // 2. Client-Side Fallback (Timeout: 10s)
+  // 2. Client-Side Fallback (Timeout: 20s)
   if (!apiKey) {
-    throw serverError || new Error("Server failed and no client key available.");
+    throw serverError || new Error("Server failed and no client API_KEY configured.");
   }
 
   try {
     const clientPromise = performClientSideAnalysis({ type: 'text', data: description });
-    return await withTimeout(clientPromise, 10000, "Client fallback timed out");
+    return await withTimeout(clientPromise, 20000, "Client fallback timed out");
   } catch (clientError) {
     console.error("Client fallback failed:", clientError);
-    throw serverError || clientError;
+    throw clientError;
   }
 }

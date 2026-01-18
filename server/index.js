@@ -66,8 +66,9 @@ app.post('/api/analyze/image', async (req, res) => {
           },
           {
             text: `Identify this food. Estimate calories/macros for a standard serving. 
-                   If it is food, set confidence to 90.
-                   If it is NOT food, set confidence to 0.
+                   - Make a best-effort guess for any edible item or food packaging.
+                   - Set confidence to 100 if it is likely food.
+                   - Only set confidence to 0 if it is clearly non-food (like a person or shoe).
                    Return JSON.`
           }
         ]
@@ -107,8 +108,9 @@ app.post('/api/analyze/text', async (req, res) => {
           {
             text: `Analyze this food description: "${description}". 
                    Estimate calories and macros.
-                   If valid food, set confidence to 90.
-                   If gibberish, set confidence 0.
+                   - Always provide a result if text describes food.
+                   - Set confidence to 100 for valid descriptions.
+                   - Set confidence to 0 only for gibberish.
                    Return JSON.`
           }
         ]
