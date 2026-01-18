@@ -2,6 +2,12 @@ import express from 'express';
 import cors from 'cors';
 import bodyParser from 'body-parser';
 import { GoogleGenAI, Type } from "@google/genai";
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+// Fix for __dirname in ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Load environment variables (ensure process.env.API_KEY is available)
 const app = express();
@@ -13,7 +19,6 @@ app.use(cors());
 app.use(bodyParser.json({ limit: '50mb' }));
 
 // Initialize Gemini
-// In a real deployment, use dotenv to load this
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 // --- AI Routes ---
@@ -30,7 +35,7 @@ app.post('/api/analyze/image', async (req, res) => {
 
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3-flash-preview',
       contents: {
         parts: [
           {
@@ -84,7 +89,7 @@ app.post('/api/analyze/text', async (req, res) => {
 
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3-flash-preview',
       contents: {
         parts: [
           {
@@ -123,6 +128,16 @@ app.post('/api/analyze/text', async (req, res) => {
     console.error("AI Text Error:", error);
     res.status(500).json({ error: "AI processing failed" });
   }
+});
+
+// --- Serve Frontend (Static Files) ---
+// This allows the Node server to serve the React app in production
+const DIST_PATH = path.join(__dirname, '../dist');
+app.use(express.static(DIST_PATH));
+
+// Handle SPA routing: return index.html for any unknown route
+app.get('*', (req, res) => {
+  res.sendFile(path.join(DIST_PATH, 'index.html'));
 });
 
 app.listen(PORT, () => {
