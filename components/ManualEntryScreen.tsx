@@ -9,18 +9,19 @@ interface ManualEntryScreenProps {
   onCancel: () => void;
   mealToEdit?: Meal | null;
   targetDate?: string;
+  initialType?: Meal['type'];
 }
 
-const ManualEntryScreen: React.FC<ManualEntryScreenProps> = ({ onSave, onCancel, mealToEdit, targetDate }) => {
+const ManualEntryScreen: React.FC<ManualEntryScreenProps> = ({ onSave, onCancel, mealToEdit, targetDate, initialType }) => {
   const { addMeal, updateMeal, getTodayString } = useData();
   const { t } = useLanguage();
   
-  // Initialize state with mealToEdit values if available
+  // Initialize state with mealToEdit values if available, otherwise default to initialType or Snack
   const [name, setName] = useState(mealToEdit?.name || '');
   const [calories, setCalories] = useState(mealToEdit?.calories.toString() || '');
   const [protein, setProtein] = useState(mealToEdit?.protein?.toString() || '');
   const [sugar, setSugar] = useState(mealToEdit?.sugar?.toString() || '');
-  const [mealType, setMealType] = useState<Meal['type']>(mealToEdit?.type || 'Snack');
+  const [mealType, setMealType] = useState<Meal['type']>(mealToEdit?.type || initialType || 'Snack');
 
   // AI Autofill State
   const [description, setDescription] = useState('');

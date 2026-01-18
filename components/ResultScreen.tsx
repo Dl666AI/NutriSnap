@@ -10,9 +10,10 @@ interface ResultScreenProps {
   onRetake: () => void;
   onManualEntry: () => void;
   targetDate?: string;
+  initialType?: Meal['type'];
 }
 
-const ResultScreen: React.FC<ResultScreenProps> = ({ image, onSave, onRetake, onManualEntry, targetDate }) => {
+const ResultScreen: React.FC<ResultScreenProps> = ({ image, onSave, onRetake, onManualEntry, targetDate, initialType }) => {
   const { addMeal, getTodayString } = useData();
   const { t } = useLanguage();
   const [analysis, setAnalysis] = useState<FoodAnalysisResult | null>(null);
@@ -90,7 +91,7 @@ const ResultScreen: React.FC<ResultScreenProps> = ({ image, onSave, onRetake, on
       fat: analysis.fat,
       sugar: analysis.sugar,
       imageUrl: image || undefined,
-      type: 'Snack' // Default type
+      type: initialType || 'Snack' // Default type or use passed type
     };
 
     addMeal(newMeal);
@@ -237,9 +238,9 @@ const ResultScreen: React.FC<ResultScreenProps> = ({ image, onSave, onRetake, on
                 {/* Fallback link if data looks wrong */}
                 <button 
                   onClick={onManualEntry}
-                  className="w-full mt-4 h-12 text-neutral-500 font-medium text-sm flex items-center justify-center gap-2 hover:text-neutral-800 dark:hover:text-neutral-200"
+                  className="w-full mt-3 h-12 text-neutral-500 dark:text-neutral-400 font-semibold text-sm hover:underline"
                 >
-                  {t('edit')} / {t('manual_entry')}
+                  {t('edit')}
                 </button>
             </>
         ) : null}

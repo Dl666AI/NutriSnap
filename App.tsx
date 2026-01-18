@@ -30,6 +30,8 @@ const AppContent: React.FC<AppContentProps> = ({ user, onLogin, onLogout, onUpda
   
   // Track which date we are adding a meal for
   const [targetDate, setTargetDate] = useState<string>(getTodayString());
+  // Track specific meal type if adding from Diary (e.g. Lunch)
+  const [targetMealType, setTargetMealType] = useState<Meal['type'] | undefined>(undefined);
   
   // UI State for Add Menu
   const [isAddMenuOpen, setIsAddMenuOpen] = useState(false);
@@ -43,6 +45,7 @@ const AppContent: React.FC<AppContentProps> = ({ user, onLogin, onLogout, onUpda
         // Default target date to today if opened from general nav
         if (currentScreen !== 'DIARY') {
             setTargetDate(getTodayString());
+            setTargetMealType(undefined);
         }
         return;
     }
@@ -58,6 +61,7 @@ const AppContent: React.FC<AppContentProps> = ({ user, onLogin, onLogout, onUpda
   const handleFabClick = () => {
       setEditingMeal(null);
       setTargetDate(getTodayString()); // Always target today
+      setTargetMealType(undefined);    // No specific section implied
       setShouldLaunchGallery(false);   // Always open camera directly
       
       // Ensure we can go back to where we came from
@@ -68,9 +72,10 @@ const AppContent: React.FC<AppContentProps> = ({ user, onLogin, onLogout, onUpda
       setCurrentScreen('CAMERA');
   };
 
-  // Handler for adding from Diary (preserves selected date)
-  const handleAddMealFromDiary = (date: string) => {
+  // Handler for adding from Diary (preserves selected date and type)
+  const handleAddMealFromDiary = (date: string, type?: Meal['type']) => {
       setTargetDate(date);
+      setTargetMealType(type);
       setIsAddMenuOpen(true);
       setPreviousTab('DIARY');
   };
@@ -146,6 +151,7 @@ const AppContent: React.FC<AppContentProps> = ({ user, onLogin, onLogout, onUpda
             <ManualEntryScreen 
                 mealToEdit={editingMeal}
                 targetDate={targetDate}
+                initialType={targetMealType}
                 onSave={() => { setEditingMeal(null); setCurrentScreen(previousTab); }} 
                 onCancel={() => { setEditingMeal(null); setCurrentScreen(previousTab); }} 
             />
@@ -155,6 +161,7 @@ const AppContent: React.FC<AppContentProps> = ({ user, onLogin, onLogout, onUpda
           <ResultScreen 
             image={capturedImage} 
             targetDate={targetDate} 
+            initialType={targetMealType}
             onSave={() => setCurrentScreen(previousTab)} 
             onRetake={() => setCurrentScreen('CAMERA')} 
             onManualEntry={() => { setEditingMeal(null); setCurrentScreen('MANUAL_ENTRY'); }}

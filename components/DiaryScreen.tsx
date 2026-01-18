@@ -7,7 +7,7 @@ import BottomNav from './BottomNav';
 interface DiaryScreenProps {
   onNavigate: (screen: Screen) => void;
   onEdit: (meal: Meal) => void;
-  onAddMeal: (date: string) => void;
+  onAddMeal: (date: string, type?: Meal['type']) => void;
   onFabClick: () => void;
 }
 
@@ -120,7 +120,7 @@ const DiaryScreen: React.FC<DiaryScreenProps> = ({ onNavigate, onEdit, onAddMeal
 
   // --- Renderers ---
 
-  const renderMealSection = (titleKey: string, sectionMeals: Meal[]) => {
+  const renderMealSection = (titleKey: string, sectionMeals: Meal[], type: Meal['type']) => {
     const sectionCals = getSectionCalories(sectionMeals);
     // @ts-ignore
     const displayTitle = t(titleKey.toLowerCase());
@@ -133,7 +133,7 @@ const DiaryScreen: React.FC<DiaryScreenProps> = ({ onNavigate, onEdit, onAddMeal
                {displayTitle}
                <span className="text-xs font-normal text-neutral-400 bg-neutral-100 dark:bg-neutral-800 px-2 py-0.5 rounded-md">0 kcal</span>
              </h3>
-             <button onClick={() => onAddMeal(selectedDateStr)} className="text-primary hover:bg-primary/10 p-1 rounded-full transition-colors">
+             <button onClick={() => onAddMeal(selectedDateStr, type)} className="text-primary hover:bg-primary/10 p-1 rounded-full transition-colors">
                 <span className="material-symbols-outlined">add</span>
              </button>
           </div>
@@ -151,7 +151,7 @@ const DiaryScreen: React.FC<DiaryScreenProps> = ({ onNavigate, onEdit, onAddMeal
              {displayTitle}
              <span className="text-xs font-normal text-neutral-400 bg-neutral-100 dark:bg-neutral-800 px-2 py-0.5 rounded-md">{sectionCals} kcal</span>
            </h3>
-           <button onClick={() => onAddMeal(selectedDateStr)} className="text-primary hover:bg-primary/10 p-1 rounded-full transition-colors">
+           <button onClick={() => onAddMeal(selectedDateStr, type)} className="text-primary hover:bg-primary/10 p-1 rounded-full transition-colors">
              <span className="material-symbols-outlined">add</span>
            </button>
         </div>
@@ -325,10 +325,10 @@ const DiaryScreen: React.FC<DiaryScreenProps> = ({ onNavigate, onEdit, onAddMeal
 
       {/* --- Meal Sections --- */}
       <main className="flex flex-col px-6 gap-8 animate-enter">
-        {renderMealSection('breakfast', breakfastMeals)}
-        {renderMealSection('lunch', lunchMeals)}
-        {renderMealSection('dinner', dinnerMeals)}
-        {renderMealSection('snack', snackMeals)}
+        {renderMealSection('breakfast', breakfastMeals, 'Breakfast')}
+        {renderMealSection('lunch', lunchMeals, 'Lunch')}
+        {renderMealSection('dinner', dinnerMeals, 'Dinner')}
+        {renderMealSection('snack', snackMeals, 'Snack')}
         
         <div className="h-4"></div>
       </main>
