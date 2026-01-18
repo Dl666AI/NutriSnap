@@ -18,7 +18,9 @@
     "express": "^5.2.1",
     "body-parser": "^2.2.2",
     "path": "^0.12.7",
-    "url": "^0.11.4"
+    "url": "^0.11.4",
+    "@dnd-kit/core": "6.1.0",
+    "@dnd-kit/utilities": "3.2.2"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
