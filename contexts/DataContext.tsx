@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useMemo } from 'react';
-import { Meal, Macro } from '../types';
+import { Meal } from '../types';
+import { MealService } from '../services/MealService';
 
 interface DailyTotals {
   calories: number;
@@ -11,35 +12,14 @@ interface DailyTotals {
 
 interface DataContextType {
   meals: Meal[];
-  addMeal: (meal: Meal) => void;
-  updateMeal: (meal: Meal) => void;
-  removeMeal: (id: string) => void;
+  isLoading: boolean;
+  addMeal: (meal: Meal) => Promise<void>;
+  updateMeal: (meal: Meal) => Promise<void>;
+  removeMeal: (id: string) => Promise<void>;
   totals: DailyTotals;
   targets: DailyTotals;
   getTodayString: () => string;
 }
-
-// --- Future Proofing: Storage Adapter ---
-// To switch to a backend later, replace the implementation of 'load' and 'save' 
-// with your API calls (e.g., fetch, axios, firebase).
-const StorageAdapter = {
-  getKey: (userId: string | null) => {
-    return userId ? `nutrisnap_meals_${userId}` : 'nutrisnap_meals_guest';
-  },
-
-  load: (userId: string | null): Meal[] => {
-    if (typeof window === 'undefined') return [];
-    const key = StorageAdapter.getKey(userId);
-    const saved = localStorage.getItem(key);
-    return saved ? JSON.parse(saved) : DEMO_MEALS;
-  },
-
-  save: (userId: string | null, meals: Meal[]) => {
-    if (typeof window === 'undefined') return;
-    const key = StorageAdapter.getKey(userId);
-    localStorage.setItem(key, JSON.stringify(meals));
-  }
-};
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
@@ -55,9 +35,6 @@ const getTodayString = () => {
   return `${year}-${month}-${day}`;
 };
 
-// Initial demo data
-const DEMO_MEALS: Meal[] = [];
-
 interface DataProviderProps {
   children: React.ReactNode;
   userId: string | null;
@@ -69,37 +46,77 @@ interface DataProviderProps {
 }
 
 export const DataProvider: React.FC<DataProviderProps> = ({ children, userId, targetCalories, customTargets }) => {
-  // Initialize state by loading from storage based on userId
-  const [meals, setMeals] = useState<Meal[]>(() => StorageAdapter.load(userId));
+  const [meals, setMeals] = useState<Meal[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Whenever meals change, persist them using the adapter
+  // Initial Load from Service
   useEffect(() => {
-    StorageAdapter.save(userId, meals);
-  }, [meals, userId]);
+    let active = true;
+    const loadData = async () => {
+      setIsLoading(true);
+      try {
+        const data = await MealService.getAll(userId);
+        if (active) setMeals(data);
+      } catch (e) {
+        console.error("Failed to load meals", e);
+      } finally {
+        if (active) setIsLoading(false);
+      }
+    };
+    
+    loadData();
+    return () => { active = false; };
+  }, [userId]);
 
-  const addMeal = (meal: Meal) => {
+  const addMeal = async (meal: Meal) => {
+    // Optimistic Update (update UI immediately)
     setMeals(prev => [meal, ...prev]);
+    
+    try {
+      // Sync with "Backend"
+      await MealService.add(userId, meal);
+    } catch (e) {
+      console.error("Failed to save meal", e);
+      // Rollback on error
+      setMeals(prev => prev.filter(m => m.id !== meal.id));
+    }
   };
 
-  const updateMeal = (updatedMeal: Meal) => {
+  const updateMeal = async (updatedMeal: Meal) => {
+    // Optimistic Update
     setMeals(prev => prev.map(meal => (meal.id === updatedMeal.id ? updatedMeal : meal)));
+    
+    try {
+      await MealService.update(userId, updatedMeal);
+    } catch (e) {
+      console.error("Failed to update meal", e);
+      // Revert needs a reload or more complex rollback logic, usually fine to just warn user
+    }
   };
 
-  const removeMeal = (id: string) => {
+  const removeMeal = async (id: string) => {
+    const backup = meals;
+    // Optimistic Update
     setMeals(prev => prev.filter(m => m.id !== id));
+    
+    try {
+      await MealService.delete(userId, id);
+    } catch (e) {
+      console.error("Failed to delete meal", e);
+      // Rollback
+      setMeals(backup);
+    }
   };
 
-  // Calculate Dynamic Targets based on calorie input
+  // Calculate Dynamic Targets
   const targets = useMemo(() => {
     const cals = targetCalories || DEFAULT_CALORIES;
     return {
       calories: cals,
-      // Use custom targets if provided, otherwise fallback to standard splits
-      // Standard Macro Split: 30% Protein, 45% Carbs, 25% Fat
       protein: customTargets?.protein || Math.round((cals * 0.30) / 4),
       carbs: Math.round((cals * 0.45) / 4),
       fat: Math.round((cals * 0.25) / 9),
-      sugar: customTargets?.sugar || 50, // Standard constant recommended limit
+      sugar: customTargets?.sugar || 50,
     };
   }, [targetCalories, customTargets]);
 
@@ -137,7 +154,8 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children, userId, ta
 
   return (
     <DataContext.Provider value={{ 
-      meals, 
+      meals,
+      isLoading, 
       addMeal,
       updateMeal,
       removeMeal, 
