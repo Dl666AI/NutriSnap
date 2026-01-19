@@ -95,12 +95,74 @@ const SettingsSheet = ({ theme, setTheme, language, setLanguage, onClose, onLogo
     );
 }
 
+// Business Logic for Nutrition Calculation
+const calculateTargets = (weight: number, height: number, age: number, gender: 'male' | 'female', goal: Goal) => {
+    if (!weight || !height || !age) return null;
+    
+    // Mifflin-St Jeor Equation
+    let bmr = (10 * weight) + (6.25 * height) - (5 * age);
+    if (gender === 'male') {
+        bmr += 5;
+    } else {
+        bmr -= 161;
+    }
+
+    // Baseline Activity Multiplier (Sedentary/Light Mix 1.25)
+    let tdee = bmr * 1.25;
+
+    // Adjust based on Goal
+    switch (goal) {
+        case 'LOSS_WEIGHT':
+            tdee -= 500; // Deficit
+            break;
+        case 'GAIN_WEIGHT':
+            tdee += 500; // Surplus
+            break;
+        case 'GAIN_MUSCLE':
+            tdee += 250; // Slight Surplus
+            break;
+    }
+
+    // Safety bounds
+    tdee = Math.max(1200, tdee);
+    
+    // Calculate Macros
+    // Protein ~30% of cals, Sugar ~10% of cals
+    const dailyCalories = Math.round(tdee);
+    const dailyProtein = Math.round((dailyCalories * 0.30) / 4);
+    const dailySugar = Math.round((dailyCalories * 0.10) / 4);
+
+    return { dailyCalories, dailyProtein, dailySugar };
+};
+
 const EditProfileModal = ({ user, onClose, onSave }: { user: User, onClose: () => void, onSave: (u: User) => void }) => {
     const { t } = useLanguage();
+    
+    // Initial State
     const [weight, setWeight] = useState<number | string>(user.weight || '');
     const [height, setHeight] = useState<number | string>(user.height || '');
     const [age, setAge] = useState<number | string>(user.age || '');
+    const [gender, setGender] = useState<'male' | 'female'>(user.gender || 'male');
+    const [goal, setGoal] = useState<Goal>(user.goal || 'LOSS_WEIGHT');
+    
     const [calories, setCalories] = useState<number | string>(user.dailyCalories || 2000);
+    const [protein, setProtein] = useState<number | string>(user.dailyProtein || Math.round(2000 * 0.3 / 4));
+    const [sugar, setSugar] = useState<number | string>(user.dailySugar || 50);
+
+    const handleAutoCalculate = () => {
+        const w = Number(weight);
+        const h = Number(height);
+        const a = Number(age);
+        
+        if (w && h && a) {
+            const result = calculateTargets(w, h, a, gender, goal);
+            if (result) {
+                setCalories(result.dailyCalories);
+                setProtein(result.dailyProtein);
+                setSugar(result.dailySugar);
+            }
+        }
+    };
 
     const handleSave = () => {
         onSave({
@@ -108,7 +170,11 @@ const EditProfileModal = ({ user, onClose, onSave }: { user: User, onClose: () =
             weight: Number(weight),
             height: Number(height),
             age: Number(age),
-            dailyCalories: Number(calories)
+            gender,
+            goal,
+            dailyCalories: Number(calories),
+            dailyProtein: Number(protein),
+            dailySugar: Number(sugar)
         });
         onClose();
     };
@@ -116,7 +182,7 @@ const EditProfileModal = ({ user, onClose, onSave }: { user: User, onClose: () =
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 font-display">
             <div className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onClick={onClose}></div>
-            <div className="relative bg-white dark:bg-surface-dark w-full max-w-sm rounded-[2rem] p-6 shadow-2xl animate-enter">
+            <div className="relative bg-white dark:bg-surface-dark w-full max-w-sm rounded-[2rem] p-6 shadow-2xl animate-enter max-h-[90vh] overflow-y-auto no-scrollbar">
                 <div className="flex justify-between items-center mb-6">
                     <h3 className="text-xl font-bold text-neutral-900 dark:text-white">{t('edit')} {t('my_stats')}</h3>
                     <button onClick={onClose} className="p-2 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800">
@@ -124,29 +190,92 @@ const EditProfileModal = ({ user, onClose, onSave }: { user: User, onClose: () =
                     </button>
                 </div>
                 
-                <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-5">
+                    {/* Gender Selection */}
+                    <div className="space-y-1">
+                        <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider">{t('gender') || 'GENDER'}</label>
+                        <div className="flex gap-2">
+                             <button onClick={() => setGender('male')} className={`flex-1 h-10 rounded-xl text-sm font-bold border transition-colors ${gender === 'male' ? 'bg-primary text-white border-primary' : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 border-transparent hover:bg-neutral-200 dark:hover:bg-neutral-700'}`}>
+                                {t('male')}
+                             </button>
+                             <button onClick={() => setGender('female')} className={`flex-1 h-10 rounded-xl text-sm font-bold border transition-colors ${gender === 'female' ? 'bg-primary text-white border-primary' : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 border-transparent hover:bg-neutral-200 dark:hover:bg-neutral-700'}`}>
+                                {t('female')}
+                             </button>
+                        </div>
+                    </div>
+
+                    {/* Stats Grid */}
+                    <div className="grid grid-cols-3 gap-3">
                          <div className="space-y-1">
-                            <label className="text-xs font-bold text-neutral-500 uppercase">{t('weight')} (kg)</label>
-                            <input type="number" value={weight} onChange={e => setWeight(e.target.value)} className="w-full h-12 px-4 rounded-xl bg-neutral-100 dark:bg-neutral-800 border-none font-bold text-neutral-900 dark:text-white" />
+                            <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider">{t('weight')} (kg)</label>
+                            <input type="number" value={weight} onChange={e => setWeight(e.target.value)} className="w-full h-12 px-3 rounded-xl bg-neutral-100 dark:bg-neutral-800 border-none font-bold text-neutral-900 dark:text-white text-center focus:ring-2 focus:ring-primary/50" />
                          </div>
                          <div className="space-y-1">
-                            <label className="text-xs font-bold text-neutral-500 uppercase">{t('height')} (cm)</label>
-                            <input type="number" value={height} onChange={e => setHeight(e.target.value)} className="w-full h-12 px-4 rounded-xl bg-neutral-100 dark:bg-neutral-800 border-none font-bold text-neutral-900 dark:text-white" />
+                            <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider">{t('height')} (cm)</label>
+                            <input type="number" value={height} onChange={e => setHeight(e.target.value)} className="w-full h-12 px-3 rounded-xl bg-neutral-100 dark:bg-neutral-800 border-none font-bold text-neutral-900 dark:text-white text-center focus:ring-2 focus:ring-primary/50" />
+                         </div>
+                         <div className="space-y-1">
+                            <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider">{t('age')}</label>
+                            <input type="number" value={age} onChange={e => setAge(e.target.value)} className="w-full h-12 px-3 rounded-xl bg-neutral-100 dark:bg-neutral-800 border-none font-bold text-neutral-900 dark:text-white text-center focus:ring-2 focus:ring-primary/50" />
                          </div>
                     </div>
+
+                    {/* Goal Selection */}
                     <div className="space-y-1">
-                        <label className="text-xs font-bold text-neutral-500 uppercase">{t('age')}</label>
-                        <input type="number" value={age} onChange={e => setAge(e.target.value)} className="w-full h-12 px-4 rounded-xl bg-neutral-100 dark:bg-neutral-800 border-none font-bold text-neutral-900 dark:text-white" />
+                        <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider">{t('current_goal')}</label>
+                        <div className="grid grid-cols-1 gap-2">
+                             <button onClick={() => setGoal('LOSS_WEIGHT')} className={`px-4 py-3 rounded-xl text-sm font-bold border flex items-center gap-3 transition-colors ${goal === 'LOSS_WEIGHT' ? 'bg-primary/10 border-primary text-primary-dark dark:text-primary' : 'bg-neutral-100 dark:bg-neutral-800 border-transparent text-neutral-500 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700'}`}>
+                                <span className="material-symbols-outlined text-lg">monitor_weight</span>
+                                {t('goal_lose')}
+                             </button>
+                             <button onClick={() => setGoal('GAIN_MUSCLE')} className={`px-4 py-3 rounded-xl text-sm font-bold border flex items-center gap-3 transition-colors ${goal === 'GAIN_MUSCLE' ? 'bg-primary/10 border-primary text-primary-dark dark:text-primary' : 'bg-neutral-100 dark:bg-neutral-800 border-transparent text-neutral-500 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700'}`}>
+                                <span className="material-symbols-outlined text-lg">fitness_center</span>
+                                {t('goal_muscle')}
+                             </button>
+                             <button onClick={() => setGoal('GAIN_WEIGHT')} className={`px-4 py-3 rounded-xl text-sm font-bold border flex items-center gap-3 transition-colors ${goal === 'GAIN_WEIGHT' ? 'bg-primary/10 border-primary text-primary-dark dark:text-primary' : 'bg-neutral-100 dark:bg-neutral-800 border-transparent text-neutral-500 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700'}`}>
+                                <span className="material-symbols-outlined text-lg">trending_up</span>
+                                {t('goal_gain')}
+                             </button>
+                        </div>
                     </div>
-                    <div className="space-y-1">
-                        <label className="text-xs font-bold text-neutral-500 uppercase">{t('daily_targets')} (kcal)</label>
-                        <input type="number" value={calories} onChange={e => setCalories(e.target.value)} className="w-full h-12 px-4 rounded-xl bg-neutral-100 dark:bg-neutral-800 border-none font-bold text-neutral-900 dark:text-white" />
+
+                    <div className="h-px bg-neutral-100 dark:bg-neutral-700 w-full my-2"></div>
+
+                    {/* Targets & Auto-Calc */}
+                    <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                            <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider">{t('daily_targets')}</label>
+                            <button 
+                                onClick={handleAutoCalculate}
+                                className="text-[10px] font-bold bg-accent text-neutral-900 px-3 py-1.5 rounded-lg flex items-center gap-1 hover:bg-accent/80 transition-colors shadow-sm active:scale-95"
+                            >
+                                <span className="material-symbols-outlined text-sm filled">auto_awesome</span>
+                                {t('recalculate')}
+                            </button>
+                        </div>
+                        
+                        <div className="space-y-1">
+                            <div className="relative">
+                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 text-xs font-bold">CAL</span>
+                                <input type="number" value={calories} onChange={e => setCalories(e.target.value)} className="w-full h-12 pl-12 pr-4 rounded-xl bg-neutral-100 dark:bg-neutral-800 border-none font-bold text-neutral-900 dark:text-white focus:ring-2 focus:ring-primary/50" />
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                             <div className="relative">
+                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 text-xs font-bold">PRO</span>
+                                <input type="number" value={protein} onChange={e => setProtein(e.target.value)} className="w-full h-12 pl-12 pr-4 rounded-xl bg-neutral-100 dark:bg-neutral-800 border-none font-bold text-neutral-900 dark:text-white focus:ring-2 focus:ring-primary/50" />
+                             </div>
+                             <div className="relative">
+                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 text-xs font-bold">SUG</span>
+                                <input type="number" value={sugar} onChange={e => setSugar(e.target.value)} className="w-full h-12 pl-12 pr-4 rounded-xl bg-neutral-100 dark:bg-neutral-800 border-none font-bold text-neutral-900 dark:text-white focus:ring-2 focus:ring-primary/50" />
+                             </div>
+                        </div>
                     </div>
 
                     <button 
                         onClick={handleSave}
-                        className="w-full h-14 mt-4 bg-primary text-white font-bold rounded-2xl hover:bg-primary-dark transition-colors flex items-center justify-center gap-2"
+                        className="w-full h-14 mt-2 bg-primary text-white font-bold rounded-2xl hover:bg-primary-dark transition-colors flex items-center justify-center gap-2 shadow-float active:scale-[0.98]"
                     >
                         <span className="material-symbols-outlined">save</span>
                         {t('save_changes')}
@@ -522,7 +651,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({
                     <div className="flex flex-col items-end">
                         <span className="text-xs font-semibold text-neutral-500 mb-0.5">{t('max_sugar')}</span>
                         <div className="text-lg font-bold text-neutral-800 dark:text-white">
-                            {user.dailySugar || 50}g
+                            {user.dailySugar || Math.round((user.dailyCalories || 2000) * 0.10 / 4)}g
                         </div>
                     </div>
                 </div>
