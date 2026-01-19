@@ -20,6 +20,7 @@ const ManualEntryScreen: React.FC<ManualEntryScreenProps> = ({ onSave, onCancel,
   const [name, setName] = useState(mealToEdit?.name || '');
   const [calories, setCalories] = useState(mealToEdit?.calories.toString() || '');
   const [protein, setProtein] = useState(mealToEdit?.protein?.toString() || '');
+  const [carbs, setCarbs] = useState(mealToEdit?.carbs?.toString() || '');
   const [sugar, setSugar] = useState(mealToEdit?.sugar?.toString() || '');
   const [mealType, setMealType] = useState<Meal['type']>(mealToEdit?.type || initialType || 'Snack');
 
@@ -34,7 +35,7 @@ const ManualEntryScreen: React.FC<ManualEntryScreenProps> = ({ onSave, onCancel,
   }, []);
 
   const handleSave = () => {
-    // Preserve existing data if editing, especially properties not in this form (like fat/carbs/image)
+    // Preserve existing data if editing, especially properties not in this form (like fat/image)
     const id = mealToEdit ? mealToEdit.id : Date.now().toString();
     const time = mealToEdit ? mealToEdit.time : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     
@@ -43,7 +44,6 @@ const ManualEntryScreen: React.FC<ManualEntryScreenProps> = ({ onSave, onCancel,
     
     const imageUrl = mealToEdit ? mealToEdit.imageUrl : undefined;
     const fat = mealToEdit?.fat;
-    const carbs = mealToEdit?.carbs;
 
     const mealData: Meal = {
       id,
@@ -52,11 +52,11 @@ const ManualEntryScreen: React.FC<ManualEntryScreenProps> = ({ onSave, onCancel,
       date,
       calories: parseInt(calories) || 0,
       protein: parseInt(protein) || 0,
+      carbs: parseInt(carbs) || 0,
       sugar: parseInt(sugar) || 0,
       type: mealType,
       imageUrl,
-      fat,
-      carbs
+      fat
     };
 
     if (mealToEdit) {
@@ -82,6 +82,7 @@ const ManualEntryScreen: React.FC<ManualEntryScreenProps> = ({ onSave, onCancel,
         setName(result.name);
         setCalories(result.calories.toString());
         setProtein(result.protein.toString());
+        setCarbs(result.carbs.toString());
         setSugar(result.sugar.toString());
       } else {
         setAiError(t('ai_error'));
@@ -203,9 +204,9 @@ const ManualEntryScreen: React.FC<ManualEntryScreenProps> = ({ onSave, onCancel,
                 />
              </div>
 
-             <div className="grid grid-cols-2 gap-4">
+             <div className="grid grid-cols-3 gap-3">
                 <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-wider text-neutral-400 ml-1">{t('protein')} (g)</label>
+                  <label className="text-xs font-bold uppercase tracking-wider text-neutral-400 ml-1 truncate">{t('protein')} (g)</label>
                   <input 
                     type="number"
                     inputMode="numeric"
@@ -216,7 +217,18 @@ const ManualEntryScreen: React.FC<ManualEntryScreenProps> = ({ onSave, onCancel,
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-wider text-neutral-400 ml-1">{t('sugar')} (g)</label>
+                  <label className="text-xs font-bold uppercase tracking-wider text-neutral-400 ml-1 truncate">{t('carbs')} (g)</label>
+                  <input 
+                    type="number"
+                    inputMode="numeric"
+                    placeholder="0"
+                    value={carbs}
+                    onChange={(e) => setCarbs(e.target.value)}
+                    className="w-full h-14 px-4 rounded-2xl bg-surface-light dark:bg-surface-dark border-none focus:ring-2 focus:ring-primary/50 text-neutral-800 dark:text-white font-bold"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-neutral-400 ml-1 truncate">{t('sugar')} (g)</label>
                   <input 
                     type="number"
                     inputMode="numeric"

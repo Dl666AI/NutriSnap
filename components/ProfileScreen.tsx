@@ -127,12 +127,13 @@ const calculateTargets = (weight: number, height: number, age: number, gender: '
     tdee = Math.max(1200, tdee);
     
     // Calculate Macros
-    // Protein ~30% of cals, Sugar ~10% of cals
+    // Protein ~30%, Carbs ~45%, Fat ~25%
     const dailyCalories = Math.round(tdee);
     const dailyProtein = Math.round((dailyCalories * 0.30) / 4);
-    const dailySugar = Math.round((dailyCalories * 0.10) / 4);
+    const dailyCarbs = Math.round((dailyCalories * 0.45) / 4);
+    const dailySugar = Math.round((dailyCalories * 0.10) / 4); // Keep sugar low
 
-    return { dailyCalories, dailyProtein, dailySugar };
+    return { dailyCalories, dailyProtein, dailyCarbs, dailySugar };
 };
 
 const EditProfileModal = ({ user, onClose, onSave }: { user: User, onClose: () => void, onSave: (u: User) => void }) => {
@@ -147,6 +148,7 @@ const EditProfileModal = ({ user, onClose, onSave }: { user: User, onClose: () =
     
     const [calories, setCalories] = useState<number | string>(user.dailyCalories || 2000);
     const [protein, setProtein] = useState<number | string>(user.dailyProtein || Math.round(2000 * 0.3 / 4));
+    const [carbs, setCarbs] = useState<number | string>(user.dailyCarbs || Math.round(2000 * 0.45 / 4));
     const [sugar, setSugar] = useState<number | string>(user.dailySugar || 50);
 
     const handleAutoCalculate = () => {
@@ -159,6 +161,7 @@ const EditProfileModal = ({ user, onClose, onSave }: { user: User, onClose: () =
             if (result) {
                 setCalories(result.dailyCalories);
                 setProtein(result.dailyProtein);
+                setCarbs(result.dailyCarbs);
                 setSugar(result.dailySugar);
             }
         }
@@ -174,6 +177,7 @@ const EditProfileModal = ({ user, onClose, onSave }: { user: User, onClose: () =
             goal,
             dailyCalories: Number(calories),
             dailyProtein: Number(protein),
+            dailyCarbs: Number(carbs),
             dailySugar: Number(sugar)
         });
         onClose();
@@ -261,14 +265,18 @@ const EditProfileModal = ({ user, onClose, onSave }: { user: User, onClose: () =
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="grid grid-cols-3 gap-2">
                              <div className="relative">
                                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 text-xs font-bold">PRO</span>
-                                <input type="number" value={protein} onChange={e => setProtein(e.target.value)} className="w-full h-12 pl-12 pr-4 rounded-xl bg-neutral-100 dark:bg-neutral-800 border-none font-bold text-neutral-900 dark:text-white focus:ring-2 focus:ring-primary/50" />
+                                <input type="number" value={protein} onChange={e => setProtein(e.target.value)} className="w-full h-12 pl-12 pr-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 border-none font-bold text-neutral-900 dark:text-white text-center focus:ring-2 focus:ring-primary/50" />
+                             </div>
+                             <div className="relative">
+                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 text-xs font-bold">CARB</span>
+                                <input type="number" value={carbs} onChange={e => setCarbs(e.target.value)} className="w-full h-12 pl-12 pr-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 border-none font-bold text-neutral-900 dark:text-white text-center focus:ring-2 focus:ring-primary/50" />
                              </div>
                              <div className="relative">
                                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 text-xs font-bold">SUG</span>
-                                <input type="number" value={sugar} onChange={e => setSugar(e.target.value)} className="w-full h-12 pl-12 pr-4 rounded-xl bg-neutral-100 dark:bg-neutral-800 border-none font-bold text-neutral-900 dark:text-white focus:ring-2 focus:ring-primary/50" />
+                                <input type="number" value={sugar} onChange={e => setSugar(e.target.value)} className="w-full h-12 pl-12 pr-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 border-none font-bold text-neutral-900 dark:text-white text-center focus:ring-2 focus:ring-primary/50" />
                              </div>
                         </div>
                     </div>
@@ -649,7 +657,13 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({
                         </div>
                     </div>
                     <div className="flex flex-col items-end">
-                        <span className="text-xs font-semibold text-neutral-500 mb-0.5">{t('max_sugar')}</span>
+                        <span className="text-xs font-semibold text-neutral-500 mb-0.5">{t('carbs')}</span>
+                        <div className="text-lg font-bold text-neutral-800 dark:text-white">
+                            {user.dailyCarbs || Math.round((user.dailyCalories || 2000) * 0.45 / 4)}g
+                        </div>
+                    </div>
+                    <div className="flex flex-col items-end">
+                        <span className="text-xs font-semibold text-neutral-500 mb-0.5">{t('sugar')}</span>
                         <div className="text-lg font-bold text-neutral-800 dark:text-white">
                             {user.dailySugar || Math.round((user.dailyCalories || 2000) * 0.10 / 4)}g
                         </div>

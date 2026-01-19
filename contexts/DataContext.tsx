@@ -41,6 +41,7 @@ interface DataProviderProps {
   targetCalories?: number;
   customTargets?: {
     protein?: number;
+    carbs?: number;
     sugar?: number;
   };
 }
@@ -114,7 +115,7 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children, userId, ta
     return {
       calories: cals,
       protein: customTargets?.protein || Math.round((cals * 0.30) / 4),
-      carbs: Math.round((cals * 0.45) / 4),
+      carbs: customTargets?.carbs || Math.round((cals * 0.45) / 4),
       fat: Math.round((cals * 0.25) / 9),
       sugar: customTargets?.sugar || 50,
     };

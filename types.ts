@@ -19,6 +19,7 @@ export interface User {
   // Nutrition Targets
   dailyCalories?: number;
   dailyProtein?: number;
+  dailyCarbs?: number;
   dailySugar?: number;
 }
 
