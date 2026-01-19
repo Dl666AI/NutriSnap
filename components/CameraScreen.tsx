@@ -108,15 +108,30 @@ const CameraScreen: React.FC<CameraScreenProps> = ({ onCapture, onCancel, onManu
       const context = canvas.getContext('2d');
       
       if (context) {
-        // Match canvas dimensions to video feed intrinsic resolution
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
+        // OPTIMIZATION: Scale down image to avoid LocalStorage Quota Exceeded errors
+        const MAX_DIMENSION = 800;
+        let width = video.videoWidth;
+        let height = video.videoHeight;
+
+        if (width > MAX_DIMENSION || height > MAX_DIMENSION) {
+            const ratio = width / height;
+            if (width > height) {
+                width = MAX_DIMENSION;
+                height = width / ratio;
+            } else {
+                height = MAX_DIMENSION;
+                width = height * ratio;
+            }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
         
         // Draw current frame to canvas
-        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        context.drawImage(video, 0, 0, width, height);
         
-        // Convert to data URL
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+        // Convert to data URL with slightly reduced quality
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
         onCapture(dataUrl);
       }
     }

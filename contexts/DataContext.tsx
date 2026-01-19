@@ -78,8 +78,28 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children, userId, ta
       await MealService.add(userId, meal);
     } catch (e) {
       console.error("Failed to save meal", e);
-      // Rollback on error
+
+      // FALLBACK STRATEGY: 
+      // If saving failed (likely due to LocalStorage 5MB limit with image),
+      // try saving the meal WITHOUT the image data.
+      if (meal.imageUrl) {
+        try {
+          console.warn("Retrying save without image data due to storage limit...");
+          const textOnlyMeal = { ...meal, imageUrl: undefined };
+          await MealService.add(userId, textOnlyMeal);
+          
+          // If fallback succeeded, update the state to reflect that the image is gone
+          // (prevents UI showing a broken image or state mismatch)
+          setMeals(prev => prev.map(m => m.id === meal.id ? textOnlyMeal : m));
+          return; // Success (with degradation)
+        } catch (retryError) {
+          console.error("Fallback save also failed", retryError);
+        }
+      }
+
+      // Rollback on error if all attempts fail
       setMeals(prev => prev.filter(m => m.id !== meal.id));
+      alert("Could not save meal. Your device storage might be full.");
     }
   };
 
@@ -91,7 +111,8 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children, userId, ta
       await MealService.update(userId, updatedMeal);
     } catch (e) {
       console.error("Failed to update meal", e);
-      // Revert needs a reload or more complex rollback logic, usually fine to just warn user
+      // Fallback/Retry logic could be added here too, but addMeal is the main offender for images
+      alert("Failed to update meal. Storage might be full.");
     }
   };
 
