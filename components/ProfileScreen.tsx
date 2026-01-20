@@ -62,9 +62,9 @@ const SettingsSheet = ({ theme, setTheme, language, setLanguage, onClose, onLogo
                 }
             } else {
                 // If we got text/html, it means the Proxy failed to connect to the backend 
-                // and Vite served index.html instead.
+                // and Vite served index.html instead, OR in production the api route is crashing
                 setDbStatus('error');
-                setDbMessage(`Backend Offline. Please run 'node server/index.js' in a new terminal.`);
+                setDbMessage(`Backend Offline. (Local: run 'node server/index.js'. Prod: Check logs)`);
             }
         } catch (e: any) {
             setDbStatus('error');

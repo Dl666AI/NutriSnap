@@ -1,5 +1,6 @@
 import dotenv from 'dotenv';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 
 // Fix for __dirname in ES modules
@@ -141,11 +142,6 @@ const RESPONSE_SCHEMA = {
 // Simple Ping
 app.get('/api/ping', (req, res) => {
     res.json({ message: 'pong', timestamp: Date.now() });
-});
-
-// Root route to verify server is running
-app.get('/', (req, res) => {
-  res.send('NutriSnap Server is Running');
 });
 
 // Health Check Endpoint
@@ -459,20 +455,25 @@ app.post('/api/analyze/text', async (req, res) => {
 });
 
 // --- API 404 Handler ---
-// This ensures that if the server is reached but the route is wrong, we return JSON.
-// If the request falls through to the static handler below (and hits index.html), 
-// it means the route wasn't under /api or the client isn't using the proxy correctly.
 app.all('/api/*', (req, res) => {
     res.status(404).json({ error: "API Route not found", path: req.path });
 });
 
 // --- Serve Frontend ---
 const DIST_PATH = path.join(__dirname, '../dist');
-app.use(express.static(DIST_PATH));
+console.log("Serving static files from:", DIST_PATH);
 
-app.get('*', (req, res) => {
-  res.sendFile(path.join(DIST_PATH, 'index.html'));
-});
+if (fs.existsSync(DIST_PATH)) {
+    app.use(express.static(DIST_PATH));
+    app.get('*', (req, res) => {
+        res.sendFile(path.join(DIST_PATH, 'index.html'));
+    });
+} else {
+    console.error(`CRITICAL: Static files not found at ${DIST_PATH}. Ensure you have run 'npm run build'.`);
+    app.get('*', (req, res) => {
+        res.status(500).send("Server Error: Static files missing. Did you build the app?");
+    });
+}
 
 // ALWAYS Start Server (unless testing)
 if (process.env.NODE_ENV !== 'test') {
