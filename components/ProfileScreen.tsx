@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Screen, Theme, User, GoogleCredentialResponse, Goal } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
@@ -9,10 +8,6 @@ import AuthSimulation from './AuthSimulation';
 
 // ------------------------------------------------------------------
 // CONFIGURATION
-// ------------------------------------------------------------------
-// IMPORTANT: To make Google Login work, you must create a Project in 
-// Google Cloud Console, setup OAuth Consent Screen, create a Credential 
-// (Client ID), and paste it below.
 // ------------------------------------------------------------------
 const GOOGLE_CLIENT_ID: string = '19113468273-pbbkm1s0evobrt5m1phtm7n31rjfbq3e.apps.googleusercontent.com'; 
 // ------------------------------------------------------------------
@@ -42,10 +37,35 @@ const calculateAge = (dob?: string): number => {
 const SettingsSheet = ({ theme, setTheme, language, setLanguage, onClose, onLogout, isLoggedIn }: any) => {
     const { t } = useLanguage();
     
+    // DB Debug State
+    const [dbStatus, setDbStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+    const [dbMessage, setDbMessage] = useState('');
+
+    const testConnection = async () => {
+        setDbStatus('loading');
+        setDbMessage('Attempting to connect...');
+        try {
+            const res = await fetch('/api/debug/connection');
+            const data = await res.json();
+            
+            if (res.ok) {
+                setDbStatus('success');
+                setDbMessage(`Success! Connected to ${data.config_used.host} (v${data.server_ip})`);
+            } else {
+                setDbStatus('error');
+                const detail = data.detail !== 'No details' ? ` - ${data.detail}` : '';
+                setDbMessage(`Error ${data.code}: ${data.message}${detail}`);
+            }
+        } catch (e) {
+            setDbStatus('error');
+            setDbMessage('Network Error: Could not reach server endpoint. App might be offline.');
+        }
+    };
+    
     return (
         <div className="fixed inset-0 z-[100] flex flex-col justify-end font-display">
             <div className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onClick={onClose}></div>
-            <div className="relative bg-surface-light dark:bg-surface-dark rounded-t-[2.5rem] p-6 pb-10 w-full max-w-3xl mx-auto animate-[float-up_0.3s_ease-out] shadow-2xl border-t border-white/20 dark:border-neutral-700">
+            <div className="relative bg-surface-light dark:bg-surface-dark rounded-t-[2.5rem] p-6 pb-10 w-full max-w-3xl mx-auto animate-[float-up_0.3s_ease-out] shadow-2xl border-t border-white/20 dark:border-neutral-700 max-h-[85vh] overflow-y-auto">
                 <div className="w-12 h-1.5 bg-neutral-300 dark:bg-neutral-600 rounded-full mx-auto mb-6"></div>
                 <h2 className="text-xl font-bold text-neutral-900 dark:text-white mb-6 px-2">{t('settings')}</h2>
                 
@@ -93,6 +113,48 @@ const SettingsSheet = ({ theme, setTheme, language, setLanguage, onClose, onLogo
                                 中文
                              </button>
                         </div>
+                    </div>
+                    
+                    {/* Database Debug Tool */}
+                    <div className="p-4 bg-white dark:bg-neutral-800 rounded-2xl border border-neutral-100 dark:border-neutral-700">
+                        <div className="flex items-center gap-3 mb-3">
+                            <div className="size-10 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+                                <span className="material-symbols-outlined">dns</span>
+                            </div>
+                            <div className="flex flex-col">
+                                <span className="font-bold text-neutral-800 dark:text-white">System Diagnostics</span>
+                                <span className="text-xs text-neutral-500">Check connection to cloud database</span>
+                            </div>
+                        </div>
+                        
+                        <div className="bg-neutral-50 dark:bg-neutral-900 rounded-xl p-3 mb-3">
+                            {dbStatus === 'idle' && <p className="text-xs text-neutral-500">Ready to test connection.</p>}
+                            {dbStatus === 'loading' && (
+                                <div className="flex items-center gap-2">
+                                    <div className="size-3 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                                    <p className="text-xs text-neutral-500">Connecting...</p>
+                                </div>
+                            )}
+                            {dbStatus === 'success' && (
+                                <p className="text-xs text-green-600 dark:text-green-400 font-medium flex items-center gap-1">
+                                    <span className="material-symbols-outlined text-sm">check_circle</span>
+                                    {dbMessage}
+                                </p>
+                            )}
+                            {dbStatus === 'error' && (
+                                <p className="text-xs text-red-600 dark:text-red-400 font-medium break-all">
+                                    {dbMessage}
+                                </p>
+                            )}
+                        </div>
+
+                        <button 
+                            onClick={testConnection}
+                            disabled={dbStatus === 'loading'}
+                            className="w-full py-2 bg-neutral-200 dark:bg-neutral-700 hover:bg-neutral-300 dark:hover:bg-neutral-600 text-neutral-700 dark:text-neutral-200 rounded-lg text-xs font-bold transition-colors"
+                        >
+                            Test Database Connection
+                        </button>
                     </div>
 
                     {isLoggedIn && (

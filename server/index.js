@@ -47,6 +47,9 @@ const dbConfig = {
 
 export const pool = new Pool(dbConfig);
 
+// Global tracker for init errors
+let dbInitError = null;
+
 // --- DB Initialization Schema ---
 const INIT_SQL = `
   CREATE TABLE IF NOT EXISTS users (
@@ -89,11 +92,13 @@ const initDb = async () => {
     try {
       await client.query(INIT_SQL);
       console.log("✅ Database tables initialized (users, meals)");
+      dbInitError = null;
     } finally {
       client.release();
     }
   } catch (err) {
     console.error("❌ Failed to initialize database tables:", err.message);
+    dbInitError = err.message;
   }
 };
 
@@ -149,14 +154,56 @@ app.get('/api/health', async (req, res) => {
       env: {
         api_key_set: !!process.env.API_KEY,
         db_host: process.env.DB_HOST
-      }
+      },
+      initError: dbInitError
     });
   } catch (err) {
     console.error("Health Check Failed:", err);
     res.status(500).json({ 
       status: 'error', 
       database: 'disconnected', 
-      error: err.message 
+      error: err.message,
+      initError: dbInitError
+    });
+  }
+});
+
+// Debug Connection Endpoint
+app.get('/api/debug/connection', async (req, res) => {
+  // Create a fresh client to test specific connection params
+  // independent of the shared pool
+  const client = new pg.Client(dbConfig);
+  try {
+    await client.connect();
+    const resSql = await client.query('SELECT NOW() as now, inet_server_addr() as ip');
+    await client.end();
+    
+    res.json({ 
+        status: 'success', 
+        message: 'Connection Successful',
+        timestamp: resSql.rows[0].now,
+        server_ip: resSql.rows[0].ip,
+        config_used: {
+            host: dbConfig.host,
+            user: dbConfig.user,
+            db: dbConfig.database,
+            ssl_enabled: !!dbConfig.ssl,
+            port: dbConfig.port
+        }
+    });
+  } catch (err) {
+    res.status(500).json({ 
+        status: 'error', 
+        message: err.message, 
+        code: err.code,
+        detail: err.detail || 'No details',
+        hint: err.hint || 'No hint',
+        config_used: {
+            host: dbConfig.host, 
+            user: dbConfig.user,
+            db: dbConfig.database,
+            ssl_enabled: !!dbConfig.ssl
+        }
     });
   }
 });
