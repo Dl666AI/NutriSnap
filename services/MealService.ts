@@ -42,7 +42,10 @@ export const MealService = {
     
     try {
       const response = await fetch(`/api/meals?userId=${encodeURIComponent(userId)}`);
-      if (!response.ok) throw new Error(`Server returned ${response.status}`);
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(`Server returned ${response.status}: ${text}`);
+      }
       const data = await response.json();
       
       // Update local cache on successful fetch
@@ -70,7 +73,10 @@ export const MealService = {
         body: JSON.stringify({ userId, meal })
       });
       
-      if (!response.ok) throw new Error('Failed to save meal remotely');
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(`Failed to save meal remotely: ${response.status} ${text}`);
+      }
       return await response.json();
     } catch (e) {
       console.warn("Backend save failed, data saved locally only.", e);
@@ -89,11 +95,17 @@ export const MealService = {
 
     // 2. Try Remote Update
     try {
-      await fetch(`/api/meals/${meal.id}`, {
+      const response = await fetch(`/api/meals/${meal.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId, meal })
       });
+
+      if (!response.ok) {
+         const text = await response.text();
+         throw new Error(`Failed to update meal remotely: ${response.status} ${text}`);
+      }
+
     } catch (e) {
       console.warn("Backend update failed, data saved locally only.", e);
     }
@@ -111,9 +123,14 @@ export const MealService = {
 
     // 2. Try Remote Delete
     try {
-      await fetch(`/api/meals/${id}?userId=${encodeURIComponent(userId)}`, {
+      const response = await fetch(`/api/meals/${id}?userId=${encodeURIComponent(userId)}`, {
         method: 'DELETE'
       });
+      
+      if (!response.ok) {
+         const text = await response.text();
+         throw new Error(`Failed to delete meal remotely: ${response.status} ${text}`);
+      }
     } catch (e) {
       console.warn("Backend delete failed, data deleted locally only.", e);
     }

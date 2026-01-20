@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Screen, User, Meal } from '../types';
 import { useData } from '../contexts/DataContext';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -14,6 +14,17 @@ interface HomeScreenProps {
 const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigate, user, onEdit, onFabClick }) => {
   const { totals, targets, meals, getTodayString } = useData();
   const { t } = useLanguage();
+  const [isOffline, setIsOffline] = useState(false);
+
+  // Check Health on Load
+  useEffect(() => {
+    fetch('/api/health')
+      .then(res => res.ok ? res.json() : Promise.reject())
+      .then(data => {
+        if (data.status !== 'ok') setIsOffline(true);
+      })
+      .catch(() => setIsOffline(true));
+  }, []);
 
   const caloriesLeft = Math.max(0, targets.calories - totals.calories);
   const progressPercent = Math.min(100, Math.round((totals.calories / targets.calories) * 100));
@@ -38,6 +49,14 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigate, user, onEdit, onFab
 
   return (
     <div className="relative flex h-full min-h-screen w-full flex-col max-w-3xl mx-auto bg-background-light dark:bg-background-dark pb-32 transition-colors duration-300">
+      {/* Offline Banner */}
+      {isOffline && (
+        <div className="bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-200 text-xs font-bold text-center py-2 px-4 flex items-center justify-center gap-2">
+            <span className="material-symbols-outlined text-sm">wifi_off</span>
+            Offline Mode: Saving to device only (Database unreachable)
+        </div>
+      )}
+
       {/* Header */}
       <header className="flex items-center justify-between px-6 pt-6 pb-2">
         <div className="flex items-center gap-3">

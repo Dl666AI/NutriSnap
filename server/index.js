@@ -1,54 +1,67 @@
-import 'dotenv/config'; // Ensure env vars are loaded
-import express from 'express';
-import cors from 'cors';
-import bodyParser from 'body-parser';
-import { GoogleGenAI, Type } from "@google/genai";
+import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import pg from 'pg';
-
-const { Pool } = pg;
 
 // Fix for __dirname in ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// --- Robust Environment Loading ---
+// 1. Try loading from current directory (e.g., server/)
+dotenv.config(); 
+// 2. If DB_HOST is missing, try loading from root (../.env)
+if (!process.env.DB_HOST) {
+  console.log("DB_HOST not found in current dir, checking parent directory...");
+  dotenv.config({ path: path.join(__dirname, '../.env') });
+}
+
+import express from 'express';
+import cors from 'cors';
+import bodyParser from 'body-parser';
+import { GoogleGenAI, Type } from "@google/genai";
+import pg from 'pg';
+
+const { Pool } = pg;
 export const app = express(); // Export for testing
 const PORT = process.env.PORT || 3000;
 
-// Log API Key status on startup (masked)
-const apiKey = process.env.API_KEY;
-if (!apiKey) {
-  console.error("CRITICAL: process.env.API_KEY is missing on server!");
-} else {
-  // Only log if running directly, not during tests
-  if (process.argv[1] === __filename) {
-    console.log(`Server initialized with API Key: ${apiKey.substring(0, 4)}...`);
-  }
+// Log Configuration Status (Safe Mode)
+if (process.argv[1] === __filename) {
+    console.log("--- Server Configuration ---");
+    console.log(`Port: ${PORT}`);
+    console.log(`DB Host: ${process.env.DB_HOST || 'MISSING'}`);
+    console.log(`DB User: ${process.env.DB_USER || 'MISSING'}`);
+    console.log(`API Key Set: ${!!process.env.API_KEY}`);
+    console.log("----------------------------");
 }
 
 // --- Database Connection ---
-export const pool = new Pool({ // Export for testing cleanup
+const dbConfig = {
   user: process.env.DB_USER,
   host: process.env.DB_HOST,
   database: process.env.DB_NAME,
   password: process.env.DB_PASSWORD,
   port: process.env.DB_PORT ? parseInt(process.env.DB_PORT) : 5432,
-  ssl: process.env.DB_HOST !== 'localhost' ? { rejectUnauthorized: false } : false, 
-  connectionTimeoutMillis: 5000, 
-});
+  // Force SSL for non-localhost, but allow self-signed certs (common for cloud IPs)
+  ssl: process.env.DB_HOST !== 'localhost' && process.env.DB_HOST !== '127.0.0.1' 
+       ? { rejectUnauthorized: false } 
+       : false, 
+  connectionTimeoutMillis: 10000, 
+};
 
-// Test DB Connection
+export const pool = new Pool(dbConfig);
+
+// Test DB Connection on Startup
 pool.connect((err, client, release) => {
   if (err) {
-    // Suppress heavy logging during tests if desired, or keep to debug connection issues
     if (process.argv[1] === __filename) {
-        console.error('Error acquiring client', err.message);
-        console.log('--- DB CONNECTION FAILED ---');
+        console.error('FATAL: Database Connection Failed!');
+        console.error('Error:', err.message);
+        console.error('Config used:', { ...dbConfig, password: '*****' });
     }
   } else {
     if (process.argv[1] === __filename) {
-        console.log('Connected to PostgreSQL database');
+        console.log('✅ Connected to PostgreSQL database successfully');
     }
     release();
   }
@@ -59,8 +72,7 @@ app.use(cors());
 app.use(bodyParser.json({ limit: '50mb' }));
 
 // Initialize Gemini
-// Use a placeholder if missing to prevent crash on import, but real calls will fail gracefully
-const ai = new GoogleGenAI({ apiKey: apiKey || 'placeholder_key_for_tests' });
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || 'placeholder_key' });
 
 const RESPONSE_SCHEMA = {
   type: Type.OBJECT,
@@ -75,6 +87,31 @@ const RESPONSE_SCHEMA = {
   },
   required: ["name", "calories", "protein", "carbs", "fat", "sugar", "confidence"]
 };
+
+// --- SYSTEM ROUTES ---
+
+// Health Check Endpoint
+app.get('/api/health', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT NOW() as time');
+    res.json({ 
+      status: 'ok', 
+      database: 'connected', 
+      time: result.rows[0].time,
+      env: {
+        api_key_set: !!process.env.API_KEY,
+        db_host: process.env.DB_HOST
+      }
+    });
+  } catch (err) {
+    console.error("Health Check Failed:", err);
+    res.status(500).json({ 
+      status: 'error', 
+      database: 'disconnected', 
+      error: err.message 
+    });
+  }
+});
 
 // --- DATA ROUTES (PostgreSQL) ---
 
@@ -113,7 +150,7 @@ app.post('/api/users', async (req, res) => {
     res.json(result.rows[0]);
   } catch (err) {
     console.error("DB Error (Sync User):", err.message);
-    res.status(500).json({ error: 'Database error' });
+    res.status(500).json({ error: 'Database error', details: err.message });
   }
 });
 
@@ -135,7 +172,7 @@ app.get('/api/meals', async (req, res) => {
     res.json(result.rows);
   } catch (err) {
     console.error("DB Error (Get Meals):", err.message);
-    res.status(500).json({ error: 'Database error' });
+    res.status(500).json({ error: 'Database error', details: err.message });
   }
 });
 
@@ -145,10 +182,21 @@ app.post('/api/meals', async (req, res) => {
   if (!userId || !meal) return res.status(400).json({ error: 'Missing data' });
 
   // Note: We strip base64 image data here if it's not a URL, to prevent DB bloat.
-  // In a real production app, you'd upload the base64 to Cloud Storage here, get a URL, and save that.
   let imageUrl = meal.imageUrl;
   if (imageUrl && imageUrl.startsWith('data:')) {
       imageUrl = null; // Don't save base64 to SQL
+  }
+
+  // Ensure user exists first (simple check)
+  // This prevents FK violations if SyncUser failed previously
+  try {
+      const userCheck = await pool.query('SELECT 1 FROM users WHERE id = $1', [userId]);
+      if (userCheck.rowCount === 0) {
+          console.warn(`Meal added for unknown user ${userId}, ignoring DB save to prevent crash.`);
+          return res.status(400).json({ error: "User not found in DB" });
+      }
+  } catch (e) {
+      console.error("Error checking user existence", e);
   }
 
   const query = `
@@ -167,7 +215,7 @@ app.post('/api/meals', async (req, res) => {
     res.json(result.rows[0]);
   } catch (err) {
     console.error("DB Error (Add Meal):", err.message);
-    res.status(500).json({ error: 'Database error' });
+    res.status(500).json({ error: 'Database error', details: err.message });
   }
 });
 
@@ -195,21 +243,21 @@ app.put('/api/meals/:id', async (req, res) => {
     res.json({ success: true });
   } catch (err) {
     console.error("DB Error (Update Meal):", err.message);
-    res.status(500).json({ error: 'Database error' });
+    res.status(500).json({ error: 'Database error', details: err.message });
   }
 });
 
 // Delete Meal
 app.delete('/api/meals/:id', async (req, res) => {
   const { id } = req.params;
-  const { userId } = req.query; // Pass userId for security check
+  const { userId } = req.query; 
 
   try {
     await pool.query('DELETE FROM meals WHERE id = $1 AND user_id = $2', [id, userId]);
     res.json({ success: true });
   } catch (err) {
     console.error("DB Error (Delete Meal):", err.message);
-    res.status(500).json({ error: 'Database error' });
+    res.status(500).json({ error: 'Database error', details: err.message });
   }
 });
 
