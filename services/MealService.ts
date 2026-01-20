@@ -1,59 +1,121 @@
+
 import { Meal } from '../types';
 
-// This simulates the latency of a real network request
-const SIMULATED_DELAY = 100;
+const STORAGE_KEY_PREFIX = 'nutrisnap_meals_';
 
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
-const getStorageKey = (userId: string | null) => {
-  return userId ? `nutrisnap_meals_${userId}` : 'nutrisnap_meals_guest';
+/**
+ * Helper to get meals from LocalStorage
+ */
+const getLocalMeals = (userId: string): Meal[] => {
+  if (typeof window === 'undefined') return [];
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY_PREFIX + userId);
+    return saved ? JSON.parse(saved) : [];
+  } catch (e) {
+    console.warn("Failed to read from local storage", e);
+    return [];
+  }
 };
 
 /**
- * MealService (Repository Pattern)
+ * Helper to save meals to LocalStorage
+ */
+const saveLocalMeals = (userId: string, meals: Meal[]) => {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(STORAGE_KEY_PREFIX + userId, JSON.stringify(meals));
+  } catch (e) {
+    console.warn("Failed to save to local storage (likely quota exceeded)", e);
+  }
+};
+
+/**
+ * MealService
  * 
- * Currently implementation: LocalStorage
- * Future implementation: fetch('/api/meals')
- * 
- * By returning Promises, the rest of the app treats this as an async API.
- * To migrate to Postgres later, you only need to change the implementation
- * of these functions to use `fetch`.
+ * Implementation: Hybrid (API with LocalStorage Fallback)
+ * This ensures the app works even if the DB connection fails.
  */
 export const MealService = {
   
   async getAll(userId: string | null): Promise<Meal[]> {
-    await delay(SIMULATED_DELAY); // Simulate network
-    const key = getStorageKey(userId);
-    const saved = localStorage.getItem(key);
-    return saved ? JSON.parse(saved) : [];
+    if (!userId) return [];
+    
+    try {
+      const response = await fetch(`/api/meals?userId=${encodeURIComponent(userId)}`);
+      if (!response.ok) throw new Error(`Server returned ${response.status}`);
+      const data = await response.json();
+      
+      // Update local cache on successful fetch
+      saveLocalMeals(userId, data);
+      return data;
+    } catch (e) {
+      console.warn("Meal fetch error (falling back to local storage):", e);
+      return getLocalMeals(userId);
+    }
   },
 
   async add(userId: string | null, meal: Meal): Promise<Meal> {
-    await delay(SIMULATED_DELAY);
-    const key = getStorageKey(userId);
-    const current = await this.getAll(userId);
-    
+    if (!userId) return meal;
+
+    // 1. Optimistic Local Save
+    const current = getLocalMeals(userId);
     const updated = [meal, ...current];
-    localStorage.setItem(key, JSON.stringify(updated));
-    return meal;
+    saveLocalMeals(userId, updated);
+
+    // 2. Try Remote Save
+    try {
+      const response = await fetch('/api/meals', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, meal })
+      });
+      
+      if (!response.ok) throw new Error('Failed to save meal remotely');
+      return await response.json();
+    } catch (e) {
+      console.warn("Backend save failed, data saved locally only.", e);
+      // Return the original meal so the UI doesn't break
+      return meal;
+    }
   },
 
   async update(userId: string | null, meal: Meal): Promise<Meal> {
-    await delay(SIMULATED_DELAY);
-    const key = getStorageKey(userId);
-    const current = await this.getAll(userId);
-    
+    if (!userId) return meal;
+
+    // 1. Optimistic Local Update
+    const current = getLocalMeals(userId);
     const updated = current.map(m => m.id === meal.id ? meal : m);
-    localStorage.setItem(key, JSON.stringify(updated));
+    saveLocalMeals(userId, updated);
+
+    // 2. Try Remote Update
+    try {
+      await fetch(`/api/meals/${meal.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, meal })
+      });
+    } catch (e) {
+      console.warn("Backend update failed, data saved locally only.", e);
+    }
+    
     return meal;
   },
 
   async delete(userId: string | null, id: string): Promise<void> {
-    await delay(SIMULATED_DELAY);
-    const key = getStorageKey(userId);
-    const current = await this.getAll(userId);
-    
+    if (!userId) return;
+
+    // 1. Optimistic Local Delete
+    const current = getLocalMeals(userId);
     const updated = current.filter(m => m.id !== id);
-    localStorage.setItem(key, JSON.stringify(updated));
+    saveLocalMeals(userId, updated);
+
+    // 2. Try Remote Delete
+    try {
+      await fetch(`/api/meals/${id}?userId=${encodeURIComponent(userId)}`, {
+        method: 'DELETE'
+      });
+    } catch (e) {
+      console.warn("Backend delete failed, data deleted locally only.", e);
+    }
   }
 };

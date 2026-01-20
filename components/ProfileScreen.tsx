@@ -1,6 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Screen, Theme, User, GoogleCredentialResponse, Goal } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
+import { useData } from '../contexts/DataContext';
 import { useLanguage, Language } from '../contexts/LanguageContext';
 import BottomNav from './BottomNav';
 import AuthSimulation from './AuthSimulation';
@@ -23,6 +25,19 @@ interface ProfileScreenProps {
   onUpdateUser: (user: User) => void;
   onFabClick: () => void;
 }
+
+// Helper to calculate age from DOB
+const calculateAge = (dob?: string): number => {
+    if (!dob) return 0;
+    const birthDate = new Date(dob);
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const m = today.getMonth() - birthDate.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+    }
+    return age;
+};
 
 const SettingsSheet = ({ theme, setTheme, language, setLanguage, onClose, onLogout, isLoggedIn }: any) => {
     const { t } = useLanguage();
@@ -142,7 +157,7 @@ const EditProfileModal = ({ user, onClose, onSave }: { user: User, onClose: () =
     // Initial State
     const [weight, setWeight] = useState<number | string>(user.weight || '');
     const [height, setHeight] = useState<number | string>(user.height || '');
-    const [age, setAge] = useState<number | string>(user.age || '');
+    const [dateOfBirth, setDateOfBirth] = useState<string>(user.dateOfBirth || '');
     const [gender, setGender] = useState<'male' | 'female'>(user.gender || 'male');
     const [goal, setGoal] = useState<Goal>(user.goal || 'LOSS_WEIGHT');
     
@@ -154,16 +169,18 @@ const EditProfileModal = ({ user, onClose, onSave }: { user: User, onClose: () =
     const handleAutoCalculate = () => {
         const w = Number(weight);
         const h = Number(height);
-        const a = Number(age);
+        const age = calculateAge(dateOfBirth);
         
-        if (w && h && a) {
-            const result = calculateTargets(w, h, a, gender, goal);
+        if (w && h && age > 0) {
+            const result = calculateTargets(w, h, age, gender, goal);
             if (result) {
                 setCalories(result.dailyCalories);
                 setProtein(result.dailyProtein);
                 setCarbs(result.dailyCarbs);
                 setSugar(result.dailySugar);
             }
+        } else {
+            alert("Please enter a valid weight, height, and date of birth.");
         }
     };
 
@@ -172,7 +189,7 @@ const EditProfileModal = ({ user, onClose, onSave }: { user: User, onClose: () =
             ...user,
             weight: Number(weight),
             height: Number(height),
-            age: Number(age),
+            dateOfBirth,
             gender,
             goal,
             dailyCalories: Number(calories),
@@ -209,7 +226,7 @@ const EditProfileModal = ({ user, onClose, onSave }: { user: User, onClose: () =
                     </div>
 
                     {/* Stats Grid */}
-                    <div className="grid grid-cols-3 gap-3">
+                    <div className="grid grid-cols-2 gap-3">
                          <div className="space-y-1">
                             <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider">{t('weight')} (kg)</label>
                             <input type="number" value={weight} onChange={e => setWeight(e.target.value)} className="w-full h-12 px-3 rounded-xl bg-neutral-100 dark:bg-neutral-800 border-none font-bold text-neutral-900 dark:text-white text-center focus:ring-2 focus:ring-primary/50" />
@@ -218,10 +235,17 @@ const EditProfileModal = ({ user, onClose, onSave }: { user: User, onClose: () =
                             <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider">{t('height')} (cm)</label>
                             <input type="number" value={height} onChange={e => setHeight(e.target.value)} className="w-full h-12 px-3 rounded-xl bg-neutral-100 dark:bg-neutral-800 border-none font-bold text-neutral-900 dark:text-white text-center focus:ring-2 focus:ring-primary/50" />
                          </div>
-                         <div className="space-y-1">
-                            <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider">{t('age')}</label>
-                            <input type="number" value={age} onChange={e => setAge(e.target.value)} className="w-full h-12 px-3 rounded-xl bg-neutral-100 dark:bg-neutral-800 border-none font-bold text-neutral-900 dark:text-white text-center focus:ring-2 focus:ring-primary/50" />
-                         </div>
+                    </div>
+                    
+                    {/* Date of Birth Input */}
+                    <div className="space-y-1">
+                        <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider">Date of Birth</label>
+                        <input 
+                            type="date" 
+                            value={dateOfBirth} 
+                            onChange={e => setDateOfBirth(e.target.value)} 
+                            className="w-full h-12 px-3 rounded-xl bg-neutral-100 dark:bg-neutral-800 border-none font-bold text-neutral-900 dark:text-white text-center focus:ring-2 focus:ring-primary/50" 
+                        />
                     </div>
 
                     {/* Goal Selection */}
@@ -304,6 +328,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({
 }) => {
   const { theme, setTheme } = useTheme();
   const { language, setLanguage, t } = useLanguage();
+  const { meals } = useData();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
@@ -315,7 +340,9 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({
   // Ref for the Google button container
   const googleButtonRef = useRef<HTMLDivElement>(null);
   
-  const days = Array.from({ length: 14 }, (_, i) => i + 1);
+  // Calendar State
+  const [calendarDate, setCalendarDate] = useState(new Date());
+  const [isMonthPickerOpen, setIsMonthPickerOpen] = useState(false);
 
   const toggleSettings = () => setIsSettingsOpen(!isSettingsOpen);
   const toggleEditProfile = () => setIsEditProfileOpen(!isEditProfileOpen);
@@ -360,7 +387,7 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({
           dailyCalories: 2000,
           weight: 70,
           height: 175,
-          age: 25,
+          dateOfBirth: '1999-01-01', // Default DOB for guest (approx 25 yrs old)
           gender: 'male',
           goal: 'LOSS_WEIGHT'
       };
@@ -428,6 +455,91 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({
         if (intervalId) clearInterval(intervalId);
     };
   }, [user, theme, onLogin]);
+
+  // Calendar Logic
+  const calendarData = useMemo(() => {
+     // 1. Aggregate calories per date "YYYY-MM-DD"
+     const totals: Record<string, number> = {};
+     meals.forEach(m => {
+        if (!totals[m.date]) totals[m.date] = 0;
+        totals[m.date] += m.calories;
+     });
+     return totals;
+  }, [meals]);
+
+  const changeCalendarMonth = (increment: number) => {
+    const newDate = new Date(calendarDate);
+    newDate.setMonth(newDate.getMonth() + increment);
+    setCalendarDate(newDate);
+  };
+
+  const changeYear = (increment: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const newDate = new Date(calendarDate);
+    newDate.setFullYear(newDate.getFullYear() + increment);
+    setCalendarDate(newDate);
+  };
+
+  const selectMonth = (monthIndex: number) => {
+    const newDate = new Date(calendarDate);
+    newDate.setMonth(monthIndex);
+    setCalendarDate(newDate);
+    setIsMonthPickerOpen(false);
+  };
+
+  const getMonthName = (index: number) => {
+     const d = new Date(2024, index, 1);
+     return d.toLocaleString(language === 'zh' ? 'zh-CN' : 'en-US', { month: 'short' });
+  };
+
+  const renderCalendar = () => {
+     const year = calendarDate.getFullYear();
+     const month = calendarDate.getMonth();
+     
+     // First day of the month (0-6)
+     const firstDay = new Date(year, month, 1).getDay();
+     // Total days in month
+     const daysInMonth = new Date(year, month + 1, 0).getDate();
+     
+     const daysArray = [];
+     
+     // Add empty padding
+     for (let i = 0; i < firstDay; i++) {
+         daysArray.push(<div key={`empty-${i}`} className="aspect-square"></div>);
+     }
+
+     const target = user?.dailyCalories || 2000;
+
+     // Add actual days
+     for (let d = 1; d <= daysInMonth; d++) {
+         const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+         const total = calendarData[dateStr];
+         const hasData = total !== undefined && total > 0;
+         
+         let bgClass = "hover:bg-neutral-100 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-300";
+         let statusIcon = null;
+
+         // Within limit (Green)
+         if (hasData && total <= target) {
+             bgClass = "bg-primary text-white shadow-soft font-bold";
+         } 
+         // Over limit (Orange)
+         else if (hasData && total > target) {
+             bgClass = "bg-orange-400 text-white shadow-soft font-bold";
+         }
+
+         daysArray.push(
+            <div key={d} className={`aspect-square rounded-full flex flex-col items-center justify-center text-sm transition-all relative ${bgClass}`}>
+                {d}
+                {hasData && (
+                    <div className="absolute -bottom-1 w-1 h-1 rounded-full bg-current opacity-60"></div>
+                )}
+            </div>
+         );
+     }
+     
+     return daysArray;
+  };
 
   // Logged-out Login View
   if (!user) {
@@ -619,8 +731,8 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({
               <div className="text-2xl font-extrabold text-neutral-900 dark:text-white">
                 {user.height ? user.height : '--'} <span className="text-base font-semibold text-neutral-500">cm</span>
               </div>
-              {user.age ? (
-                  <p className="text-xs text-neutral-400 mt-2 font-medium">{t('age')}: {user.age}</p>
+              {user.dateOfBirth ? (
+                  <p className="text-xs text-neutral-400 mt-2 font-medium">{t('age')}: {calculateAge(user.dateOfBirth)}</p>
               ) : (
                   <p className="text-xs text-neutral-400 mt-2 font-medium">{t('age')}: --</p>
               )}
@@ -679,30 +791,83 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-neutral-900 dark:text-white text-lg font-bold">{t('consistency')}</h2>
         </div>
-        <div className="bg-surface-light dark:bg-surface-dark rounded-3xl p-5 shadow-card">
+        <div className="bg-surface-light dark:bg-surface-dark rounded-3xl p-5 shadow-card relative z-10">
+          {/* Calendar Header with Dropdown */}
+          <div className="relative">
+             <div className="flex items-center justify-between mb-4">
+                <button onClick={() => changeCalendarMonth(-1)} className="p-1.5 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded-full transition-colors">
+                    <span className="material-symbols-outlined text-neutral-500 dark:text-neutral-400">chevron_left</span>
+                </button>
+                
+                <button 
+                onClick={() => setIsMonthPickerOpen(!isMonthPickerOpen)}
+                className="flex items-center gap-2 font-bold text-neutral-800 dark:text-white text-sm hover:bg-neutral-200 dark:hover:bg-neutral-700 px-3 py-1.5 rounded-xl transition-colors"
+                >
+                    <span>{calendarDate.toLocaleString(language === 'zh' ? 'zh-CN' : 'default', { month: 'long', year: 'numeric' })}</span>
+                    <span className={`material-symbols-outlined text-lg transition-transform duration-300 ${isMonthPickerOpen ? 'rotate-180' : ''}`}>arrow_drop_down</span>
+                </button>
+
+                <button onClick={() => changeCalendarMonth(1)} className="p-1.5 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded-full transition-colors">
+                    <span className="material-symbols-outlined text-neutral-500 dark:text-neutral-400">chevron_right</span>
+                </button>
+            </div>
+            
+            {/* Month/Year Picker Dropdown */}
+            {isMonthPickerOpen && (
+                <>
+                    <div className="fixed inset-0 z-10" onClick={() => setIsMonthPickerOpen(false)}></div>
+                    <div className="absolute top-12 left-1/2 -translate-x-1/2 w-64 bg-white dark:bg-neutral-800 rounded-2xl shadow-float border border-neutral-100 dark:border-neutral-700 p-4 z-20 animate-enter origin-top">
+                        <div className="flex items-center justify-between mb-4 px-2">
+                            <button onClick={(e) => changeYear(-1, e)} className="p-1 hover:bg-neutral-100 dark:hover:bg-neutral-700 rounded-full text-neutral-600 dark:text-neutral-300">
+                                <span className="material-symbols-outlined text-sm">chevron_left</span>
+                            </button>
+                            <span className="font-bold text-neutral-900 dark:text-white">{calendarDate.getFullYear()}</span>
+                            <button onClick={(e) => changeYear(1, e)} className="p-1 hover:bg-neutral-100 dark:hover:bg-neutral-700 rounded-full text-neutral-600 dark:text-neutral-300">
+                                <span className="material-symbols-outlined text-sm">chevron_right</span>
+                            </button>
+                        </div>
+                        <div className="grid grid-cols-3 gap-2">
+                            {Array.from({length: 12}).map((_, i) => (
+                                <button
+                                    key={i}
+                                    onClick={() => selectMonth(i)}
+                                    className={`py-2 rounded-lg text-xs font-bold transition-colors ${
+                                        calendarDate.getMonth() === i 
+                                        ? 'bg-primary text-white shadow-md' 
+                                        : 'text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-700'
+                                    }`}
+                                >
+                                    {getMonthName(i)}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                </>
+            )}
+          </div>
+
+          {/* Days Header */}
           <div className="grid grid-cols-7 mb-2">
             {['S','M','T','W','T','F','S'].map((d, i) => (
               <div key={i} className="text-center text-xs font-semibold text-neutral-400 py-2">{d}</div>
             ))}
           </div>
-          <div className="grid grid-cols-7 gap-y-2">
-            <div className="aspect-square"></div>
-            <div className="aspect-square"></div>
-            <div className="aspect-square"></div>
-            <button className="aspect-square flex items-center justify-center rounded-full text-neutral-700 dark:text-neutral-300 text-sm font-medium hover:bg-neutral-100 dark:hover:bg-neutral-700">1</button>
-            <button className="aspect-square flex items-center justify-center rounded-full text-neutral-700 dark:text-neutral-300 text-sm font-medium hover:bg-neutral-100 dark:hover:bg-neutral-700">2</button>
-            <button className="aspect-square flex flex-col items-center justify-center rounded-full text-neutral-700 dark:text-neutral-300 text-sm font-medium hover:bg-neutral-100 dark:hover:bg-neutral-700">
-              3 <span className="block w-1 h-1 bg-neutral-300 rounded-full mt-0.5"></span>
-            </button>
-            <button className="aspect-square flex items-center justify-center rounded-full bg-primary/20 dark:bg-primary/30 text-primary-dark dark:text-white text-sm font-bold">4</button>
-            <button className="aspect-square flex flex-col items-center justify-center rounded-full bg-primary text-white text-sm font-bold shadow-soft relative">
-              5
-            </button>
-            <button className="aspect-square flex items-center justify-center rounded-full bg-primary/20 dark:bg-primary/30 text-primary-dark dark:text-white text-sm font-bold">6</button>
-            <button className="aspect-square flex items-center justify-center rounded-full bg-primary/20 dark:bg-primary/30 text-primary-dark dark:text-white text-sm font-bold">7</button>
-            {days.slice(7).map(d => (
-               <button key={d} className="aspect-square flex items-center justify-center rounded-full text-neutral-700 dark:text-neutral-300 text-sm font-medium hover:bg-neutral-100 dark:hover:bg-neutral-700">{d}</button>
-            ))}
+
+          {/* Days Grid */}
+          <div className="grid grid-cols-7 gap-y-2 gap-x-1">
+            {renderCalendar()}
+          </div>
+          
+          {/* Legend */}
+          <div className="flex justify-center gap-4 mt-4 pt-4 border-t border-neutral-100 dark:border-neutral-800">
+             <div className="flex items-center gap-1.5">
+                <div className="size-2.5 rounded-full bg-primary"></div>
+                <span className="text-[10px] text-neutral-500 font-medium">On Target</span>
+             </div>
+             <div className="flex items-center gap-1.5">
+                <div className="size-2.5 rounded-full bg-orange-400"></div>
+                <span className="text-[10px] text-neutral-500 font-medium">Over Limit</span>
+             </div>
           </div>
         </div>
       </section>

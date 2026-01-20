@@ -8,11 +8,11 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  photoUrl: string;
+  photoUrl?: string; // Optional: Matches database NULLABLE column
   // Physical Attributes
   height?: number; // cm
   weight?: number; // kg
-  age?: number;
+  dateOfBirth?: string; // YYYY-MM-DD
   gender?: 'male' | 'female';
   goal?: Goal;
   
@@ -33,7 +33,7 @@ export interface Meal {
   sugar?: number;
   fat?: number;
   carbs?: number;
-  imageUrl?: string;
+  imageUrl?: string; // Optional: Matches database NULLABLE column
   type: 'Breakfast' | 'Lunch' | 'Dinner' | 'Snack';
 }
 

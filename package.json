@@ -20,7 +20,10 @@
     "path": "^0.12.7",
     "url": "^0.11.4",
     "@dnd-kit/core": "6.1.0",
-    "@dnd-kit/utilities": "3.2.2"
+    "@dnd-kit/utilities": "3.2.2",
+    "pg": "^8.17.1",
+    "dotenv": "^17.2.3",
+    "supertest": "^7.2.2"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",

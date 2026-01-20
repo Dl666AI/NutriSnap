@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Screen, User, Meal } from './types';
 import { ThemeProvider } from './contexts/ThemeContext';
@@ -12,6 +13,7 @@ import DiaryScreen from './components/DiaryScreen';
 import InsightsScreen from './components/InsightsScreen';
 import ManualEntryScreen from './components/ManualEntryScreen';
 import AddMenu from './components/AddMenu';
+import { UserService } from './services/UserService';
 
 // Props for the internal app content (now that User state is lifted)
 interface AppContentProps {
@@ -213,14 +215,18 @@ const App: React.FC = () => {
     return null;
   });
 
-  const handleLogin = (newUser: User) => {
+  const handleLogin = async (newUser: User) => {
     setUser(newUser);
     localStorage.setItem('nutrisnap_user', JSON.stringify(newUser));
+    // Sync to DB
+    await UserService.syncUser(newUser);
   };
 
-  const handleUpdateUser = (updatedUser: User) => {
+  const handleUpdateUser = async (updatedUser: User) => {
     setUser(updatedUser);
     localStorage.setItem('nutrisnap_user', JSON.stringify(updatedUser));
+    // Sync to DB
+    await UserService.syncUser(updatedUser);
   };
 
   const handleLogout = () => {
