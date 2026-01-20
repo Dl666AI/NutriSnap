@@ -8,7 +8,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // --- Robust Environment Loading ---
-dotenv.config(); 
+dotenv.config();
 // In production/docker, .env might not exist or be injected via cloud env vars
 // We skip checking parent directory in strict production to avoid permission errors
 if (!process.env.DB_HOST && process.env.NODE_ENV !== 'production') {
@@ -23,7 +23,7 @@ import { GoogleGenAI, Type } from "@google/genai";
 import pg from 'pg';
 
 const { Pool } = pg;
-export const app = express(); 
+export const app = express();
 // Cloud Run injects PORT (8080), ensure we use it
 const PORT = process.env.PORT || 3000;
 
@@ -34,18 +34,32 @@ console.log(`Environment Port: ${process.env.PORT}`);
 console.log(`Resolved Port: ${PORT}`);
 
 // --- Database Connection ---
-const dbConfig = {
-  user: process.env.DB_USER,
-  host: process.env.DB_HOST,
-  database: process.env.DB_NAME,
-  password: process.env.DB_PASSWORD,
-  port: process.env.DB_PORT ? parseInt(process.env.DB_PORT) : 5432,
-  // Cloud SQL often requires SSL. We enable it loosely for compatibility.
-  ssl: process.env.DB_HOST && process.env.DB_HOST !== 'localhost' && process.env.DB_HOST !== '127.0.0.1' 
-       ? { rejectUnauthorized: false } 
-       : false, 
-  connectionTimeoutMillis: 5000, // Fail fast on DB connection
-};
+// Cloud Run + Cloud SQL: Use Unix socket when INSTANCE_CONNECTION_NAME is set
+const instanceConnectionName = process.env.INSTANCE_CONNECTION_NAME;
+
+const dbConfig = instanceConnectionName
+  ? {
+    // Cloud Run with Cloud SQL Unix Socket
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
+    host: `/cloudsql/${instanceConnectionName}`,
+    // No port or SSL needed for Unix socket
+  }
+  : {
+    // Local development with TCP/IP
+    user: process.env.DB_USER,
+    host: process.env.DB_HOST,
+    database: process.env.DB_NAME,
+    password: process.env.DB_PASSWORD,
+    port: process.env.DB_PORT ? parseInt(process.env.DB_PORT) : 5432,
+    ssl: process.env.DB_HOST && process.env.DB_HOST !== 'localhost' && process.env.DB_HOST !== '127.0.0.1'
+      ? { rejectUnauthorized: false }
+      : false,
+    connectionTimeoutMillis: 5000,
+  };
+
+console.log(`DB Connection Mode: ${instanceConnectionName ? 'Cloud SQL Socket' : 'TCP/IP'}`);
 
 export const pool = new Pool(dbConfig);
 let dbInitError = null;
@@ -108,13 +122,13 @@ pool.connect((err, client, release) => {
     dbInitError = err.message;
   } else {
     console.log('✅ Connected to PostgreSQL');
-    initDb(); 
+    initDb();
     release();
   }
 });
 
 // Middleware
-app.use(cors()); 
+app.use(cors());
 app.use(bodyParser.json({ limit: '50mb' }));
 
 // Initialize Gemini
@@ -138,7 +152,7 @@ const RESPONSE_SCHEMA = {
 // --- ROUTES ---
 
 app.get('/api/ping', (req, res) => {
-    res.json({ message: 'pong', timestamp: Date.now() });
+  res.json({ message: 'pong', timestamp: Date.now() });
 });
 
 app.get('/api/health', async (req, res) => {
@@ -152,20 +166,20 @@ app.get('/api/debug/connection', async (req, res) => {
     await client.connect();
     const resSql = await client.query('SELECT inet_server_addr() as ip');
     await client.end();
-    
-    res.json({ 
-        status: 'success', 
-        message: 'Connected',
-        server_ip: resSql.rows[0].ip,
-        config: { host: dbConfig.host, user: dbConfig.user }
+
+    res.json({
+      status: 'success',
+      message: 'Connected',
+      server_ip: resSql.rows[0].ip,
+      config: { host: dbConfig.host, user: dbConfig.user }
     });
   } catch (err) {
     // Return JSON error, not 500 HTML
-    res.status(500).json({ 
-        status: 'error', 
-        message: err.message, 
-        code: err.code,
-        config: { host: dbConfig.host }
+    res.status(500).json({
+      status: 'error',
+      message: err.message,
+      code: err.code,
+      config: { host: dbConfig.host }
     });
   }
 });
@@ -206,23 +220,23 @@ app.get('/api/meals', async (req, res) => {
 app.post('/api/meals', async (req, res) => {
   const { userId, meal } = req.body;
   if (!userId || !meal) return res.status(400).json({ error: 'Missing data' });
-  
+
   // Don't crash if DB insert fails
   try {
-      // Lazy user creation
-      const userCheck = await pool.query('SELECT 1 FROM users WHERE id = $1', [userId]);
-      if (userCheck.rowCount === 0) {
-          await pool.query('INSERT INTO users (id, name) VALUES ($1, $2) ON CONFLICT DO NOTHING', [userId, 'Unknown User']);
-      }
+    // Lazy user creation
+    const userCheck = await pool.query('SELECT 1 FROM users WHERE id = $1', [userId]);
+    if (userCheck.rowCount === 0) {
+      await pool.query('INSERT INTO users (id, name) VALUES ($1, $2) ON CONFLICT DO NOTHING', [userId, 'Unknown User']);
+    }
 
-      let imageUrl = meal.imageUrl;
-      if (imageUrl && imageUrl.startsWith('data:')) imageUrl = null; 
+    let imageUrl = meal.imageUrl;
+    if (imageUrl && imageUrl.startsWith('data:')) imageUrl = null;
 
-      const query = `INSERT INTO meals (id, user_id, name, meal_time, meal_date, type, calories, protein, carbs, fat, sugar, image_url) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *;`;
-      const values = [meal.id, userId, meal.name, meal.time, meal.date, meal.type, meal.calories, meal.protein, meal.carbs, meal.fat, meal.sugar, imageUrl];
-      
-      const result = await pool.query(query, values);
-      res.json(result.rows[0]);
+    const query = `INSERT INTO meals (id, user_id, name, meal_time, meal_date, type, calories, protein, carbs, fat, sugar, image_url) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *;`;
+    const values = [meal.id, userId, meal.name, meal.time, meal.date, meal.type, meal.calories, meal.protein, meal.carbs, meal.fat, meal.sugar, imageUrl];
+
+    const result = await pool.query(query, values);
+    res.json(result.rows[0]);
   } catch (err) {
     console.error("Add Meal Failed:", err);
     res.status(500).json({ error: 'Database error', details: err.message });
@@ -245,7 +259,7 @@ app.put('/api/meals/:id', async (req, res) => {
 app.delete('/api/meals/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { userId } = req.query; 
+    const { userId } = req.query;
     await pool.query('DELETE FROM meals WHERE id = $1 AND user_id = $2', [id, userId]);
     res.json({ success: true });
   } catch (err) {
@@ -259,7 +273,7 @@ app.post('/api/analyze/image', async (req, res) => {
     const { image } = req.body;
     if (!image) return res.status(400).json({ error: 'Image required' });
     const cleanBase64 = image.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, "");
-    
+
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: {
@@ -296,7 +310,7 @@ app.post('/api/analyze/text', async (req, res) => {
 
 // 1. If we are here, no API route matched.
 app.all('/api/*', (req, res) => {
-    res.status(404).json({ error: "API Route not found", path: req.path });
+  res.status(404).json({ error: "API Route not found", path: req.path });
 });
 
 // 2. Serve Frontend (Production)
@@ -305,15 +319,15 @@ const DIST_PATH = path.join(__dirname, '../dist');
 console.log(`Serving static files from: ${DIST_PATH}`);
 
 if (fs.existsSync(DIST_PATH)) {
-    app.use(express.static(DIST_PATH));
-    app.get('*', (req, res) => {
-        res.sendFile(path.join(DIST_PATH, 'index.html'));
-    });
+  app.use(express.static(DIST_PATH));
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(DIST_PATH, 'index.html'));
+  });
 } else {
-    console.error(`❌ Dist folder missing at ${DIST_PATH}! Frontend will not load.`);
-    app.get('*', (req, res) => {
-        res.status(500).send("Server Error: Frontend assets missing. Deployment failed.");
-    });
+  console.error(`❌ Dist folder missing at ${DIST_PATH}! Frontend will not load.`);
+  app.get('*', (req, res) => {
+    res.status(500).send("Server Error: Frontend assets missing. Deployment failed.");
+  });
 }
 
 // Global Error Handler to prevent crashes
