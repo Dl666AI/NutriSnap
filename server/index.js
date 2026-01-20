@@ -9,8 +9,9 @@ const __dirname = path.dirname(__filename);
 
 // --- Robust Environment Loading ---
 dotenv.config(); 
-// In production/docker, .env might not exist, so we skip the parent check if variables are present
-if (!process.env.DB_HOST && !process.env.NODE_ENV === 'production') {
+// In production/docker, .env might not exist or be injected via cloud env vars
+// We skip checking parent directory in strict production to avoid permission errors
+if (!process.env.DB_HOST && process.env.NODE_ENV !== 'production') {
   console.log("DB_HOST not found in current dir, checking parent directory...");
   dotenv.config({ path: path.join(__dirname, '../.env') });
 }
@@ -23,13 +24,14 @@ import pg from 'pg';
 
 const { Pool } = pg;
 export const app = express(); 
-// Cloud Run injects PORT, usually 8080
+// Cloud Run injects PORT (8080), ensure we use it
 const PORT = process.env.PORT || 3000;
 
 console.log("--- Server Starting ---");
+console.log(`Current Directory: ${process.cwd()}`);
+console.log(`Script Directory: ${__dirname}`);
 console.log(`Environment Port: ${process.env.PORT}`);
 console.log(`Resolved Port: ${PORT}`);
-console.log(`Node Environment: ${process.env.NODE_ENV}`);
 
 // --- Database Connection ---
 const dbConfig = {
@@ -38,16 +40,14 @@ const dbConfig = {
   database: process.env.DB_NAME,
   password: process.env.DB_PASSWORD,
   port: process.env.DB_PORT ? parseInt(process.env.DB_PORT) : 5432,
-  // Cloud SQL Proxy/Cloud Run often requires SSL or specific socket config
+  // Cloud SQL often requires SSL. We enable it loosely for compatibility.
   ssl: process.env.DB_HOST && process.env.DB_HOST !== 'localhost' && process.env.DB_HOST !== '127.0.0.1' 
        ? { rejectUnauthorized: false } 
        : false, 
-  connectionTimeoutMillis: 10000, 
+  connectionTimeoutMillis: 5000, // Fail fast on DB connection
 };
 
 export const pool = new Pool(dbConfig);
-
-// Global tracker for init errors
 let dbInitError = null;
 
 // --- DB Initialization Schema ---
@@ -85,31 +85,29 @@ const INIT_SQL = `
   );
 `;
 
-// Initialize DB
 const initDb = async () => {
   try {
     const client = await pool.connect();
     try {
       await client.query(INIT_SQL);
-      console.log("✅ Database tables initialized (users, meals)");
+      console.log("✅ Database tables initialized");
       dbInitError = null;
     } finally {
       client.release();
     }
   } catch (err) {
-    console.error("❌ Failed to initialize database tables:", err.message);
+    console.error("❌ DB Init Failed:", err.message);
     dbInitError = err.message;
   }
 };
 
-// Check DB Connection on Start
-// We don't block server startup on DB failure, to allow diagnostics to run
+// Check DB Connection on Start (Non-blocking)
 pool.connect((err, client, release) => {
   if (err) {
-    console.error('⚠️ Warning: Initial Database Connection Failed:', err.message);
+    console.error('⚠️ Warning: Initial DB Connection Failed:', err.message);
     dbInitError = err.message;
   } else {
-    console.log('✅ Connected to PostgreSQL database');
+    console.log('✅ Connected to PostgreSQL');
     initDb(); 
     release();
   }
@@ -120,6 +118,7 @@ app.use(cors());
 app.use(bodyParser.json({ limit: '50mb' }));
 
 // Initialize Gemini
+// We allow a fallback key to prevent server crash on startup if key is missing
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || 'placeholder_key' });
 
 const RESPONSE_SCHEMA = {
@@ -136,70 +135,42 @@ const RESPONSE_SCHEMA = {
   required: ["name", "calories", "protein", "carbs", "fat", "sugar", "confidence"]
 };
 
-// --- SYSTEM ROUTES ---
+// --- ROUTES ---
 
-// Simple Ping
 app.get('/api/ping', (req, res) => {
     res.json({ message: 'pong', timestamp: Date.now() });
 });
 
-// Health Check Endpoint
 app.get('/api/health', async (req, res) => {
-  try {
-    const timeResult = await pool.query('SELECT NOW() as time');
-    
-    res.json({ 
-      status: 'ok', 
-      database: 'connected', 
-      time: timeResult.rows[0].time,
-      initError: dbInitError
-    });
-  } catch (err) {
-    console.error("Health Check Failed:", err);
-    res.status(500).json({ 
-      status: 'error', 
-      database: 'disconnected', 
-      error: err.message,
-      initError: dbInitError
-    });
-  }
+  res.json({ status: 'ok', dbInitError });
 });
 
-// Debug Connection Endpoint
 app.get('/api/debug/connection', async (req, res) => {
+  // Try connecting with a fresh client to test current config
   const client = new pg.Client(dbConfig);
   try {
     await client.connect();
-    const resSql = await client.query('SELECT NOW() as now, inet_server_addr() as ip');
+    const resSql = await client.query('SELECT inet_server_addr() as ip');
     await client.end();
     
     res.json({ 
         status: 'success', 
-        message: 'Connection Successful',
+        message: 'Connected',
         server_ip: resSql.rows[0].ip,
-        config_used: {
-            host: dbConfig.host,
-            user: dbConfig.user,
-            db: dbConfig.database,
-            ssl_enabled: !!dbConfig.ssl
-        }
+        config: { host: dbConfig.host, user: dbConfig.user }
     });
   } catch (err) {
+    // Return JSON error, not 500 HTML
     res.status(500).json({ 
         status: 'error', 
         message: err.message, 
         code: err.code,
-        config_used: {
-            host: dbConfig.host, 
-            user: dbConfig.user,
-            db: dbConfig.database,
-            ssl_enabled: !!dbConfig.ssl
-        }
+        config: { host: dbConfig.host }
     });
   }
 });
 
-// --- DATA ROUTES (PostgreSQL) ---
+// --- DATA ROUTES ---
 
 app.post('/api/users', async (req, res) => {
   const user = req.body;
@@ -217,7 +188,6 @@ app.post('/api/users', async (req, res) => {
     const result = await pool.query(query, values);
     res.json(result.rows[0]);
   } catch (err) {
-    console.error("DB Error (Sync User):", err.message);
     res.status(500).json({ error: 'Database error', details: err.message });
   }
 });
@@ -229,7 +199,6 @@ app.get('/api/meals', async (req, res) => {
     const result = await pool.query(`SELECT id, name, meal_time as "time", meal_date::text as "date", type, calories, protein, carbs, fat, sugar, image_url as "imageUrl" FROM meals WHERE user_id = $1 ORDER BY meal_date DESC, meal_time DESC`, [userId]);
     res.json(result.rows);
   } catch (err) {
-    console.error("DB Error (Get Meals):", err.message);
     res.status(500).json({ error: 'Database error', details: err.message });
   }
 });
@@ -237,59 +206,60 @@ app.get('/api/meals', async (req, res) => {
 app.post('/api/meals', async (req, res) => {
   const { userId, meal } = req.body;
   if (!userId || !meal) return res.status(400).json({ error: 'Missing data' });
-  let imageUrl = meal.imageUrl;
-  if (imageUrl && imageUrl.startsWith('data:')) imageUrl = null; 
-
+  
+  // Don't crash if DB insert fails
   try {
+      // Lazy user creation
       const userCheck = await pool.query('SELECT 1 FROM users WHERE id = $1', [userId]);
       if (userCheck.rowCount === 0) {
           await pool.query('INSERT INTO users (id, name) VALUES ($1, $2) ON CONFLICT DO NOTHING', [userId, 'Unknown User']);
       }
-  } catch (e) { console.error("Error checking user existence", e); }
 
-  const query = `INSERT INTO meals (id, user_id, name, meal_time, meal_date, type, calories, protein, carbs, fat, sugar, image_url) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *;`;
-  const values = [meal.id, userId, meal.name, meal.time, meal.date, meal.type, meal.calories, meal.protein, meal.carbs, meal.fat, meal.sugar, imageUrl];
-  try {
-    const result = await pool.query(query, values);
-    res.json(result.rows[0]);
+      let imageUrl = meal.imageUrl;
+      if (imageUrl && imageUrl.startsWith('data:')) imageUrl = null; 
+
+      const query = `INSERT INTO meals (id, user_id, name, meal_time, meal_date, type, calories, protein, carbs, fat, sugar, image_url) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *;`;
+      const values = [meal.id, userId, meal.name, meal.time, meal.date, meal.type, meal.calories, meal.protein, meal.carbs, meal.fat, meal.sugar, imageUrl];
+      
+      const result = await pool.query(query, values);
+      res.json(result.rows[0]);
   } catch (err) {
-    console.error("DB Error (Add Meal):", err.message);
+    console.error("Add Meal Failed:", err);
     res.status(500).json({ error: 'Database error', details: err.message });
   }
 });
 
 app.put('/api/meals/:id', async (req, res) => {
-  const { id } = req.params;
-  const { userId, meal } = req.body;
-  const query = `UPDATE meals SET name=$1, meal_time=$2, meal_date=$3, type=$4, calories=$5, protein=$6, carbs=$7, fat=$8, sugar=$9 WHERE id = $10 AND user_id = $11 RETURNING *;`;
-  const values = [meal.name, meal.time, meal.date, meal.type, meal.calories, meal.protein, meal.carbs, meal.fat, meal.sugar, id, userId];
   try {
+    const { id } = req.params;
+    const { userId, meal } = req.body;
+    const query = `UPDATE meals SET name=$1, meal_time=$2, meal_date=$3, type=$4, calories=$5, protein=$6, carbs=$7, fat=$8, sugar=$9 WHERE id = $10 AND user_id = $11 RETURNING *;`;
+    const values = [meal.name, meal.time, meal.date, meal.type, meal.calories, meal.protein, meal.carbs, meal.fat, meal.sugar, id, userId];
     await pool.query(query, values);
     res.json({ success: true });
   } catch (err) {
-    console.error("DB Error (Update Meal):", err.message);
     res.status(500).json({ error: 'Database error', details: err.message });
   }
 });
 
 app.delete('/api/meals/:id', async (req, res) => {
-  const { id } = req.params;
-  const { userId } = req.query; 
   try {
+    const { id } = req.params;
+    const { userId } = req.query; 
     await pool.query('DELETE FROM meals WHERE id = $1 AND user_id = $2', [id, userId]);
     res.json({ success: true });
   } catch (err) {
-    console.error("DB Error (Delete Meal):", err.message);
     res.status(500).json({ error: 'Database error', details: err.message });
   }
 });
 
 // --- AI Routes ---
 app.post('/api/analyze/image', async (req, res) => {
-  const { image } = req.body;
-  if (!image) return res.status(400).json({ error: 'Image data required' });
-  const cleanBase64 = image.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, "");
   try {
+    const { image } = req.body;
+    if (!image) return res.status(400).json({ error: 'Image required' });
+    const cleanBase64 = image.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, "");
+    
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: {
@@ -298,40 +268,41 @@ app.post('/api/analyze/image', async (req, res) => {
       config: { responseMimeType: "application/json", responseSchema: RESPONSE_SCHEMA }
     });
     if (response.text) res.json(JSON.parse(response.text));
-    else res.status(500).json({ error: "No data returned from AI" });
+    else res.status(500).json({ error: "Empty AI response" });
   } catch (error) {
-    console.error("Server AI Image Analysis Error:", error);
-    res.status(500).json({ error: "AI processing failed", details: error.message });
+    console.error("AI Error:", error);
+    res.status(500).json({ error: "AI failed", details: error.message });
   }
 });
 
 app.post('/api/analyze/text', async (req, res) => {
-  const { description } = req.body;
-  if (!description) return res.status(400).json({ error: 'Description required' });
   try {
+    const { description } = req.body;
+    if (!description) return res.status(400).json({ error: 'Description required' });
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: { parts: [{ text: `Analyze: "${description}"... Return JSON.` }] },
       config: { responseMimeType: "application/json", responseSchema: RESPONSE_SCHEMA }
     });
     if (response.text) res.json(JSON.parse(response.text));
-    else res.status(500).json({ error: "No data returned from AI" });
+    else res.status(500).json({ error: "Empty AI response" });
   } catch (error) {
-    console.error("Server AI Text Analysis Error:", error);
-    res.status(500).json({ error: "AI processing failed", details: error.message });
+    console.error("AI Error:", error);
+    res.status(500).json({ error: "AI failed", details: error.message });
   }
 });
 
-// --- API 404 Handler ---
-// If it starts with /api but matches nothing above
+// --- 404 & Static Fallback ---
+
+// 1. If we are here, no API route matched.
 app.all('/api/*', (req, res) => {
     res.status(404).json({ error: "API Route not found", path: req.path });
 });
 
-// --- Serve Frontend ---
-// This handles everything else
+// 2. Serve Frontend (Production)
+// We look for ../dist because we are running in /app/server
 const DIST_PATH = path.join(__dirname, '../dist');
-console.log("Static file path:", DIST_PATH);
+console.log(`Serving static files from: ${DIST_PATH}`);
 
 if (fs.existsSync(DIST_PATH)) {
     app.use(express.static(DIST_PATH));
@@ -339,16 +310,21 @@ if (fs.existsSync(DIST_PATH)) {
         res.sendFile(path.join(DIST_PATH, 'index.html'));
     });
 } else {
-    console.error(`❌ CRITICAL ERROR: 'dist' folder not found at ${DIST_PATH}. The frontend was not built correctly.`);
+    console.error(`❌ Dist folder missing at ${DIST_PATH}! Frontend will not load.`);
     app.get('*', (req, res) => {
-        res.status(500).send("Server Error: Frontend assets missing. Check server logs.");
+        res.status(500).send("Server Error: Frontend assets missing. Deployment failed.");
     });
 }
 
-// ALWAYS Start Server
+// Global Error Handler to prevent crashes
+app.use((err, req, res, next) => {
+  console.error("Unhandled Server Error:", err);
+  res.status(500).json({ error: "Internal Server Error", message: err.message });
+});
+
+// Start Server
 if (process.env.NODE_ENV !== 'test') {
-  // Bind to 0.0.0.0 for Docker
   app.listen(PORT, '0.0.0.0', () => {
-    console.log(`🚀 Server running on http://0.0.0.0:${PORT}`);
+    console.log(`🚀 Server listening on 0.0.0.0:${PORT}`);
   });
 }
