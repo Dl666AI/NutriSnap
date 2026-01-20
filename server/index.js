@@ -59,7 +59,8 @@ app.use(cors());
 app.use(bodyParser.json({ limit: '50mb' }));
 
 // Initialize Gemini
-const ai = new GoogleGenAI({ apiKey: apiKey });
+// Use a placeholder if missing to prevent crash on import, but real calls will fail gracefully
+const ai = new GoogleGenAI({ apiKey: apiKey || 'placeholder_key_for_tests' });
 
 const RESPONSE_SCHEMA = {
   type: Type.OBJECT,
