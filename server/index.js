@@ -23,14 +23,10 @@ const { Pool } = pg;
 export const app = express(); 
 const PORT = process.env.PORT || 3000;
 
-// Log Configuration Status
-if (process.argv[1] === __filename) {
-    console.log("--- Server Configuration ---");
-    console.log(`Port: ${PORT}`);
-    console.log(`DB Host: ${process.env.DB_HOST || 'MISSING'}`);
-    console.log(`DB User: ${process.env.DB_USER || 'MISSING'}`);
-    console.log("----------------------------");
-}
+console.log("--- Server Starting ---");
+console.log(`Environment Port: ${process.env.PORT}`);
+console.log(`Resolved Port: ${PORT}`);
+console.log(`DB Host: ${process.env.DB_HOST || 'MISSING'}`);
 
 // --- Database Connection ---
 const dbConfig = {
@@ -102,24 +98,26 @@ const initDb = async () => {
   }
 };
 
-// Connect and Init
+// Check DB Connection on Start
 pool.connect((err, client, release) => {
   if (err) {
-    if (process.argv[1] === __filename) {
-        console.error('FATAL: Database Connection Failed!', err.message);
-    }
+    console.error('⚠️ Warning: Initial Database Connection Failed:', err.message);
   } else {
-    if (process.argv[1] === __filename) {
-        console.log('✅ Connected to PostgreSQL database successfully');
-        initDb(); // Run migration
-    }
+    console.log('✅ Connected to PostgreSQL database');
+    initDb(); 
     release();
   }
 });
 
 // Middleware
-app.use(cors());
+app.use(cors()); // Allow all origins for easier debugging
 app.use(bodyParser.json({ limit: '50mb' }));
+
+// DEBUG: Log all API requests
+app.use('/api', (req, res, next) => {
+    console.log(`[API REQUEST] ${req.method} ${req.originalUrl}`);
+    next();
+});
 
 // Initialize Gemini
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || 'placeholder_key' });
@@ -139,6 +137,16 @@ const RESPONSE_SCHEMA = {
 };
 
 // --- SYSTEM ROUTES ---
+
+// Simple Ping
+app.get('/api/ping', (req, res) => {
+    res.json({ message: 'pong', timestamp: Date.now() });
+});
+
+// Root route to verify server is running
+app.get('/', (req, res) => {
+  res.send('NutriSnap Server is Running');
+});
 
 // Health Check Endpoint
 app.get('/api/health', async (req, res) => {
@@ -450,6 +458,14 @@ app.post('/api/analyze/text', async (req, res) => {
   }
 });
 
+// --- API 404 Handler ---
+// This ensures that if the server is reached but the route is wrong, we return JSON.
+// If the request falls through to the static handler below (and hits index.html), 
+// it means the route wasn't under /api or the client isn't using the proxy correctly.
+app.all('/api/*', (req, res) => {
+    res.status(404).json({ error: "API Route not found", path: req.path });
+});
+
 // --- Serve Frontend ---
 const DIST_PATH = path.join(__dirname, '../dist');
 app.use(express.static(DIST_PATH));
@@ -458,9 +474,10 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(DIST_PATH, 'index.html'));
 });
 
-// Only start listening if run directly
-if (process.argv[1] === __filename) {
-  app.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+// ALWAYS Start Server (unless testing)
+if (process.env.NODE_ENV !== 'test') {
+  // Listen on 0.0.0.0 to bind to all interfaces (required for Docker/Cloud Run)
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Server running on http://0.0.0.0:${PORT}`);
   });
 }

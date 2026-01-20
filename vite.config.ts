@@ -11,9 +11,10 @@ export default defineConfig(({ mode }) => {
       'process.env.API_KEY': JSON.stringify(env.API_KEY),
     },
     server: {
+      host: '0.0.0.0', // Expose frontend to network
       proxy: {
         '/api': {
-          target: 'http://localhost:3000',
+          target: 'http://127.0.0.1:3000', // Use IPv4 loopback explicitly
           changeOrigin: true,
           secure: false,
         }

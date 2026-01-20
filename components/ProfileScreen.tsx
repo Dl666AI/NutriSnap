@@ -46,19 +46,29 @@ const SettingsSheet = ({ theme, setTheme, language, setLanguage, onClose, onLogo
         setDbMessage('Attempting to connect...');
         try {
             const res = await fetch('/api/debug/connection');
-            const data = await res.json();
             
-            if (res.ok) {
-                setDbStatus('success');
-                setDbMessage(`Success! Connected to ${data.config_used.host} (v${data.server_ip})`);
+            // Check content type to see if we got JSON or HTML (404 fallback)
+            const contentType = res.headers.get("content-type");
+            
+            if (contentType && contentType.indexOf("application/json") !== -1) {
+                const data = await res.json();
+                if (res.ok) {
+                    setDbStatus('success');
+                    setDbMessage(`Success! Connected to ${data.config_used.host} (v${data.server_ip})`);
+                } else {
+                    setDbStatus('error');
+                    const detail = data.detail !== 'No details' ? ` - ${data.detail}` : '';
+                    setDbMessage(`Error ${data.code}: ${data.message}${detail}`);
+                }
             } else {
+                // If we got text/html, it means the Proxy failed to connect to the backend 
+                // and Vite served index.html instead.
                 setDbStatus('error');
-                const detail = data.detail !== 'No details' ? ` - ${data.detail}` : '';
-                setDbMessage(`Error ${data.code}: ${data.message}${detail}`);
+                setDbMessage(`Backend Offline. Please run 'node server/index.js' in a new terminal.`);
             }
-        } catch (e) {
+        } catch (e: any) {
             setDbStatus('error');
-            setDbMessage('Network Error: Could not reach server endpoint. App might be offline.');
+            setDbMessage(`Network Error: ${e.message || 'Connection Refused'}. Is the server running?`);
         }
     };
     
