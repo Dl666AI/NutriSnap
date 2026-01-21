@@ -1,6 +1,19 @@
 
 import { User } from '../types';
 
+// Helper to ensure numeric fields are numbers (DB returns strings for numerics)
+const parseUserResponse = (data: any): User => {
+  return {
+    ...data,
+    weight: data.weight ? Number(data.weight) : undefined,
+    height: data.height ? Number(data.height) : undefined,
+    dailyCalories: data.dailyCalories ? Number(data.dailyCalories) : undefined,
+    dailyProtein: data.dailyProtein ? Number(data.dailyProtein) : undefined,
+    dailyCarbs: data.dailyCarbs ? Number(data.dailyCarbs) : undefined,
+    dailySugar: data.dailySugar ? Number(data.dailySugar) : undefined,
+  };
+};
+
 export const UserService = {
   /**
    * Fetches the user's profile from the backend database.
@@ -19,7 +32,8 @@ export const UserService = {
         return null;
       }
 
-      return await response.json();
+      const data = await response.json();
+      return parseUserResponse(data);
     } catch (e) {
       console.warn('User fetch error (running offline):', e);
       return null;
@@ -44,7 +58,8 @@ export const UserService = {
         return user; // Return local version on fail
       }
 
-      return await response.json();
+      const data = await response.json();
+      return parseUserResponse(data);
     } catch (e) {
       console.warn('User sync error (running offline):', e);
       return user;
