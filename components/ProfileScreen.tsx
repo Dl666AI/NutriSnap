@@ -238,6 +238,9 @@ const EditProfileModal = ({ user, onClose, onSave }: { user: User, onClose: () =
     const [carbs, setCarbs] = useState<number | string>(user.dailyCarbs || Math.round(2000 * 0.45 / 4));
     const [sugar, setSugar] = useState<number | string>(user.dailySugar || 50);
 
+    // Save operation loading state
+    const [isSaving, setIsSaving] = useState(false);
+
     const handleAutoCalculate = () => {
         const w = Number(weight);
         const h = Number(height);
@@ -256,7 +259,7 @@ const EditProfileModal = ({ user, onClose, onSave }: { user: User, onClose: () =
         }
     };
 
-    const handleSave = () => {
+    const handleSave = async () => {
         const newState = {
             ...user,
             weight: Number(weight),
@@ -269,9 +272,22 @@ const EditProfileModal = ({ user, onClose, onSave }: { user: User, onClose: () =
             dailyCarbs: Number(carbs),
             dailySugar: Number(sugar)
         };
-        console.log('[Profile] Saving User State:', newState);
-        onSave(newState);
-        onClose();
+
+        console.log('[Profile] handleSave called');
+        console.log('[Profile] User data to save:', JSON.stringify(newState, null, 2));
+
+        setIsSaving(true);
+
+        try {
+            console.log('[Profile] Calling onSave (await)...');
+            await onSave(newState);
+            console.log('[Profile] Save SUCCESS - closing modal');
+            onClose();
+        } catch (error) {
+            console.error('[Profile] Save FAILED:', error);
+            alert('Failed to save profile. Please try again.');
+            setIsSaving(false);
+        }
     };
 
     return (
@@ -381,10 +397,16 @@ const EditProfileModal = ({ user, onClose, onSave }: { user: User, onClose: () =
 
                     <button
                         onClick={handleSave}
-                        className="w-full h-14 mt-2 bg-primary text-white font-bold rounded-2xl hover:bg-primary-dark transition-colors flex items-center justify-center gap-2 shadow-float active:scale-[0.98]"
+                        disabled={isSaving}
+                        className={`w-full h-14 mt-2 font-bold rounded-2xl transition-colors flex items-center justify-center gap-2 shadow-float active:scale-[0.98] ${isSaving
+                                ? 'bg-neutral-400 text-neutral-200 cursor-not-allowed'
+                                : 'bg-primary text-white hover:bg-primary-dark'
+                            }`}
                     >
-                        <span className="material-symbols-outlined">save</span>
-                        {t('save_changes')}
+                        <span className={`material-symbols-outlined ${isSaving ? 'animate-spin' : ''}`}>
+                            {isSaving ? 'progress_activity' : 'save'}
+                        </span>
+                        {isSaving ? 'Saving...' : t('save_changes')}
                     </button>
                 </div>
             </div>

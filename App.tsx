@@ -224,11 +224,22 @@ const App: React.FC = () => {
     const existingUser = await UserService.getUser(newUser.id);
     console.log('[App] 3. Existing User from DB:', existingUser ? JSON.stringify(existingUser, null, 2) : 'NULL (user not found)');
 
-    // Merge: Use database data if available, otherwise use new user data
-    // Fresh Google profile data (name, email, photoUrl) takes precedence
-    const mergedUser = existingUser
-      ? { ...existingUser, ...newUser } // DB data as base, override with fresh Google profile
-      : newUser; // New user, use as-is
+    // Merge: DB data is the source of truth for stats; Google provides fresh profile info
+    // CRITICAL: Only override with newUser properties that are DEFINED
+    // Otherwise `{ ...existingUser, ...newUser }` would overwrite saved stats with `undefined`
+    let mergedUser: User;
+    if (existingUser) {
+      // Start with DB data
+      mergedUser = { ...existingUser };
+      // Only override with defined values from Google login (name, email, photo)
+      if (newUser.name !== undefined) mergedUser.name = newUser.name;
+      if (newUser.email !== undefined) mergedUser.email = newUser.email;
+      if (newUser.photoUrl !== undefined) mergedUser.photoUrl = newUser.photoUrl;
+      // Keep all other stats from existingUser (weight, height, etc.)
+    } else {
+      // New user - use Google data as-is
+      mergedUser = newUser;
+    }
 
     console.log('[App] 4. Merged User (before sync):', JSON.stringify(mergedUser, null, 2));
     setUser(mergedUser);
