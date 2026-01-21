@@ -217,6 +217,48 @@ app.get('/api/users/:id', async (req, res) => {
 app.post('/api/users', async (req, res) => {
   const user = req.body;
 
+  // ═══════════════════════════════════════════════════════════════
+  // CRITICAL FIX: Sanitize data before UPSERT
+  // ═══════════════════════════════════════════════════════════════
+  // Problem: DB contains empty strings "" for stats fields
+  // COALESCE(NULL, "") returns "", not NULL - perpetuating the issue
+  // Solution: Convert empty strings and invalid values to NULL
+  // ═══════════════════════════════════════════════════════════════
+  const sanitizeNumeric = (val) => {
+    // Convert "", undefined, null, 0, NaN to null
+    if (val === '' || val === undefined || val === null) return null;
+    const num = Number(val);
+    if (isNaN(num) || num <= 0) return null; // Height/Weight can't be 0 or negative
+    return num;
+  };
+
+  const sanitizeString = (val) => {
+    // Convert empty strings to null
+    if (typeof val === 'string' && val.trim() === '') return null;
+    if (val === undefined || val === null) return null;
+    return val;
+  };
+
+  // Sanitize all user fields
+  const sanitizedUser = {
+    id: user.id, // Required, never null
+    name: user.name || null,
+    email: user.email || null,
+    photoUrl: sanitizeString(user.photoUrl),
+    height: sanitizeNumeric(user.height),
+    weight: sanitizeNumeric(user.weight),
+    dateOfBirth: sanitizeString(user.dateOfBirth),
+    gender: sanitizeString(user.gender),
+    goal: sanitizeString(user.goal),
+    dailyCalories: sanitizeNumeric(user.dailyCalories),
+    dailyProtein: sanitizeNumeric(user.dailyProtein),
+    dailyCarbs: sanitizeNumeric(user.dailyCarbs),
+    dailySugar: sanitizeNumeric(user.dailySugar)
+  };
+
+  console.log('[API] POST /api/users - Original payload:', JSON.stringify(user, null, 2));
+  console.log('[API] POST /api/users - Sanitized payload:', JSON.stringify(sanitizedUser, null, 2));
+
   // Use COALESCE in the UPDATE clause to preserve existing values if the new ones are null/undefined.
   // This prevents accidental wiping of stats if the client sends a partial user object.
   const query = `
@@ -238,19 +280,29 @@ app.post('/api/users', async (req, res) => {
       updated_at = NOW()
     RETURNING *;
   `;
-  const values = [user.id, user.name, user.email, user.photoUrl, user.height, user.weight, user.dateOfBirth || null, user.gender, user.goal, user.dailyCalories, user.dailyProtein, user.dailyCarbs, user.dailySugar];
+
+  const values = [
+    sanitizedUser.id,
+    sanitizedUser.name,
+    sanitizedUser.email,
+    sanitizedUser.photoUrl,
+    sanitizedUser.height,
+    sanitizedUser.weight,
+    sanitizedUser.dateOfBirth,
+    sanitizedUser.gender,
+    sanitizedUser.goal,
+    sanitizedUser.dailyCalories,
+    sanitizedUser.dailyProtein,
+    sanitizedUser.dailyCarbs,
+    sanitizedUser.dailySugar
+  ];
+
   try {
-    // --- DEBUG LOGGING ---
-    console.log(`[API] POST /api/users received for ID: ${user.id}`);
-    console.log(`[API] Payload:`, JSON.stringify(user, null, 2));
-
     const result = await pool.query(query, values);
-
     console.log(`[API] User UPSERT Result:`, result.rows[0]);
-    // ---------------------
-
     res.json(result.rows[0]);
   } catch (err) {
+    console.error('[API] User UPSERT Error:', err);
     res.status(500).json({ error: 'Database error', details: err.message });
   }
 });
@@ -381,8 +433,21 @@ const DIST_PATH = path.join(__dirname, '../dist');
 console.log(`Serving static files from: ${DIST_PATH}`);
 
 if (fs.existsSync(DIST_PATH)) {
-  app.use(express.static(DIST_PATH));
+  // Serve static assets with caching (1yr)
+  app.use(express.static(DIST_PATH, {
+    maxAge: '1y',
+    setHeaders: (res, path) => {
+      if (path.endsWith('index.html')) {
+        // ID: cache-control-fix
+        // Never cache index.html so users always get the latest version (pointing to latest hashed assets)
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      }
+    }
+  }));
+
+  // Fallback for SPA routing - also no-cache
   app.get('*', (req, res) => {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.sendFile(path.join(DIST_PATH, 'index.html'));
   });
 } else {

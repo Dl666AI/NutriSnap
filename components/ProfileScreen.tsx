@@ -772,12 +772,50 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({
                     </button>
                 </div>
 
-                {/* DEBUG PANEL */}
-                <div className="mb-4 p-4 bg-gray-100 dark:bg-neutral-800 rounded-xl overflow-hidden border border-red-200">
-                    <p className="text-xs font-bold text-red-500 mb-2">DEBUG: Raw User Data</p>
-                    <pre className="text-[10px] text-neutral-600 dark:text-neutral-400 overflow-x-auto whitespace-pre-wrap font-mono">
-                        {JSON.stringify(user, null, 2)}
-                    </pre>
+                {/* ENHANCED DEBUG PANEL */}
+                <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/20 rounded-xl border-2 border-red-500">
+                    <p className="text-xs font-bold text-red-600 dark:text-red-400 mb-3 flex items-center gap-2">
+                        <span className="material-symbols-outlined text-sm">bug_report</span>
+                        DIAGNOSTIC PANEL
+                    </p>
+
+                    {/* Quick Stats */}
+                    <div className="grid grid-cols-3 gap-2 mb-3">
+                        <div className="bg-white dark:bg-neutral-800 p-2 rounded">
+                            <p className="text-[10px] text-neutral-500">Weight</p>
+                            <p className="text-xs font-bold text-neutral-900 dark:text-white">
+                                {user.weight ?? '--'}
+                            </p>
+                        </div>
+                        <div className="bg-white dark:bg-neutral-800 p-2 rounded">
+                            <p className="text-[10px] text-neutral-500">Height</p>
+                            <p className="text-xs font-bold text-neutral-900 dark:text-white">
+                                {user.height ?? '--'}
+                            </p>
+                        </div>
+                        <div className="bg-white dark:bg-neutral-800 p-2 rounded">
+                            <p className="text-[10px] text-neutral-500">DOB</p>
+                            <p className="text-xs font-bold text-neutral-900 dark:text-white">
+                                {user.dateOfBirth ?? '--'}
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* LocalStorage Check */}
+                    <div className="bg-white dark:bg-neutral-800 p-2 rounded mb-2">
+                        <p className="text-[10px] text-neutral-500 mb-1">LocalStorage:</p>
+                        <pre className="text-[9px] text-neutral-700 dark:text-neutral-300 overflow-x-auto whitespace-pre-wrap font-mono max-h-20 overflow-y-auto">
+                            {typeof window !== 'undefined' ? localStorage.getItem('nutrisnap_user') || 'EMPTY' : 'N/A'}
+                        </pre>
+                    </div>
+
+                    {/* Full User Object */}
+                    <details className="bg-white dark:bg-neutral-800 p-2 rounded">
+                        <summary className="text-[10px] text-neutral-500 cursor-pointer">Full User Object (click to expand)</summary>
+                        <pre className="text-[9px] text-neutral-700 dark:text-neutral-300 overflow-x-auto whitespace-pre-wrap font-mono mt-2 max-h-40 overflow-y-auto">
+                            {JSON.stringify(user, null, 2)}
+                        </pre>
+                    </details>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">

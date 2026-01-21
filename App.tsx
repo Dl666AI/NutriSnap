@@ -216,8 +216,13 @@ const App: React.FC = () => {
   });
 
   const handleLogin = async (newUser: User) => {
+    console.log('=== [App] LOGIN STARTED ===');
+    console.log('[App] 1. New User from Login:', JSON.stringify(newUser, null, 2));
+
     // Try to fetch existing user data from database
+    console.log('[App] 2. Fetching existing user from DB...');
     const existingUser = await UserService.getUser(newUser.id);
+    console.log('[App] 3. Existing User from DB:', existingUser ? JSON.stringify(existingUser, null, 2) : 'NULL (user not found)');
 
     // Merge: Use database data if available, otherwise use new user data
     // Fresh Google profile data (name, email, photoUrl) takes precedence
@@ -225,24 +230,36 @@ const App: React.FC = () => {
       ? { ...existingUser, ...newUser } // DB data as base, override with fresh Google profile
       : newUser; // New user, use as-is
 
+    console.log('[App] 4. Merged User (before sync):', JSON.stringify(mergedUser, null, 2));
     setUser(mergedUser);
     localStorage.setItem('nutrisnap_user', JSON.stringify(mergedUser));
+    console.log('[App] 5. Set user state and localStorage with merged user');
 
     // Sync to DB (will create if new, update if existing)
     // CRITICAL FIX: Use the response from syncUser as the source of truth.
     // This ensures that if the initial getUser failed (e.g. cold start), we still get the data back from the UPSERT.
+    console.log('[App] 6. Syncing to DB...');
     const syncedUser = await UserService.syncUser(mergedUser);
 
-    console.log('[App] Final Synced User:', syncedUser);
+    console.log('[App] 7. Synced User from DB:', JSON.stringify(syncedUser, null, 2));
     setUser(syncedUser);
     localStorage.setItem('nutrisnap_user', JSON.stringify(syncedUser));
+    console.log('[App] 8. FINAL: Set user state and localStorage with synced user');
+    console.log('=== [App] LOGIN COMPLETE ===');
   };
 
   const handleUpdateUser = async (updatedUser: User) => {
+    console.log('=== [App] UPDATE USER STARTED ===');
+    console.log('[App] Updated User (before sync):', JSON.stringify(updatedUser, null, 2));
+
     // Sync to DB
     const syncedUser = await UserService.syncUser(updatedUser);
+    console.log('[App] Synced User from DB:', JSON.stringify(syncedUser, null, 2));
+
     setUser(syncedUser);
     localStorage.setItem('nutrisnap_user', JSON.stringify(syncedUser));
+    console.log('[App] UPDATE USER COMPLETE');
+    console.log('===========================');
   };
 
   const handleLogout = () => {
