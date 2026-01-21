@@ -87,6 +87,7 @@ export const UserService = {
       }
 
       const data = await response.json();
+      console.log('[UserService] Sync Raw DB Response:', data);
       return parseUserResponse(data);
     } catch (e) {
       console.warn('User sync error (running offline):', e);

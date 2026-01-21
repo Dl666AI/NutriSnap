@@ -257,7 +257,7 @@ const EditProfileModal = ({ user, onClose, onSave }: { user: User, onClose: () =
     };
 
     const handleSave = () => {
-        onSave({
+        const newState = {
             ...user,
             weight: Number(weight),
             height: Number(height),
@@ -268,7 +268,9 @@ const EditProfileModal = ({ user, onClose, onSave }: { user: User, onClose: () =
             dailyProtein: Number(protein),
             dailyCarbs: Number(carbs),
             dailySugar: Number(sugar)
-        });
+        };
+        console.log('[Profile] Saving User State:', newState);
+        onSave(newState);
         onClose();
     };
 
@@ -769,6 +771,15 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({
                         {t('edit')}
                     </button>
                 </div>
+
+                {/* DEBUG PANEL */}
+                <div className="mb-4 p-4 bg-gray-100 dark:bg-neutral-800 rounded-xl overflow-hidden border border-red-200">
+                    <p className="text-xs font-bold text-red-500 mb-2">DEBUG: Raw User Data</p>
+                    <pre className="text-[10px] text-neutral-600 dark:text-neutral-400 overflow-x-auto whitespace-pre-wrap font-mono">
+                        {JSON.stringify(user, null, 2)}
+                    </pre>
+                </div>
+
                 <div className="grid grid-cols-2 gap-4">
                     <div
                         onClick={toggleEditProfile}
@@ -904,8 +915,8 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({
                                                 key={i}
                                                 onClick={() => selectMonth(i)}
                                                 className={`py-2 rounded-lg text-xs font-bold transition-colors ${calendarDate.getMonth() === i
-                                                        ? 'bg-primary text-white shadow-md'
-                                                        : 'text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-700'
+                                                    ? 'bg-primary text-white shadow-md'
+                                                    : 'text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-700'
                                                     }`}
                                             >
                                                 {getMonthName(i)}
