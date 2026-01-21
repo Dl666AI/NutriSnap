@@ -82,10 +82,10 @@ async function performClientSideAnalysis(
 
   try {
     let promptParts: any[] = [];
-    
+
     if (input.type === 'image') {
       const { mimeType, data } = parseDataUrl(input.data);
-      
+
       promptParts = [
         {
           inlineData: {
@@ -115,7 +115,7 @@ async function performClientSideAnalysis(
     }
 
     const response = await clientAI.models.generateContent({
-      model: 'gemini-3-flash-preview',
+      model: 'gemini-2.5-flash',
       contents: { parts: promptParts },
       config: {
         responseMimeType: "application/json",

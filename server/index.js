@@ -275,9 +275,14 @@ app.post('/api/analyze/image', async (req, res) => {
     const cleanBase64 = image.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, "");
 
     const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
+      model: 'gemini-2.5-flash',
       contents: {
-        parts: [{ inlineData: { mimeType: 'image/jpeg', data: cleanBase64 } }, { text: `Identify this food... Return JSON.` }]
+        parts: [{ inlineData: { mimeType: 'image/jpeg', data: cleanBase64 } }, {
+          text: `Identify this food item. Estimate calories and macros for a standard serving.
+                 - Always make a best-effort guess, even for packaged goods or unclear images.
+                 - Set confidence to 100 if you can identify ANY food, drink, or food packaging.
+                 - Only set confidence to 0 if the image is clearly a non-food object (like a shoe) or pitch black.
+                 Return strictly JSON.` }]
       },
       config: { responseMimeType: "application/json", responseSchema: RESPONSE_SCHEMA }
     });
@@ -294,8 +299,16 @@ app.post('/api/analyze/text', async (req, res) => {
     const { description } = req.body;
     if (!description) return res.status(400).json({ error: 'Description required' });
     const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
-      contents: { parts: [{ text: `Analyze: "${description}"... Return JSON.` }] },
+      model: 'gemini-2.5-flash',
+      contents: {
+        parts: [{
+          text: `Analyze this food description: "${description}". 
+                 Estimate calories and macros.
+                 - Always provide a result if the text describes something edible.
+                 - Set confidence to 100 for any valid food description.
+                 - Only set confidence to 0 for complete gibberish.
+                 Return strictly JSON.` }]
+      },
       config: { responseMimeType: "application/json", responseSchema: RESPONSE_SCHEMA }
     });
     if (response.text) res.json(JSON.parse(response.text));
