@@ -1,0 +1,558 @@
+import request from 'supertest';
+import { app, pool } from '../index.js';
+
+// Generate unique IDs for testing to avoid collision
+const TEST_TIMESTAMP = Date.now();
+const TEST_USER_ID = `test_user_${TEST_TIMESTAMP}`;
+const TEST_MEAL_ID = `test_meal_${TEST_TIMESTAMP}`;
+
+const testUser = {
+  id: TEST_USER_ID,
+  name: 'Integration Test User',
+  email: `test_${TEST_TIMESTAMP}@example.com`,
+  photoUrl: null,
+  height: 175,
+  weight: 70,
+  dateOfBirth: '1990-01-01',
+  gender: 'male',
+  goal: 'LOSS_WEIGHT',
+  dailyCalories: 2000,
+  dailyProtein: 150,
+  dailyCarbs: 200,
+  dailySugar: 50
+};
+
+const testMeal = {
+  id: TEST_MEAL_ID,
+  name: 'Test Avocado Toast',
+  time: '08:00 AM',
+  date: '2024-01-01',
+  type: 'Breakfast',
+  calories: 350,
+  protein: 10,
+  carbs: 40,
+  fat: 15,
+  sugar: 2,
+  imageUrl: null
+};
+
+// Helper function to log test results
+const logTestResult = (testName, passed, details = {}) => {
+  const timestamp = new Date().toISOString();
+  const status = passed ? '✅ PASS' : '❌ FAIL';
+  console.log(`\n[${timestamp}] ${status}: ${testName}`);
+  if (Object.keys(details).length > 0) {
+    console.log('Details:', JSON.stringify(details, null, 2));
+  }
+};
+
+// Helper function to log errors
+const logError = (testName, error, response = null) => {
+  console.error(`\n❌ ERROR in ${testName}:`);
+  console.error('Error Message:', error.message);
+  if (error.stack) {
+    console.error('Stack Trace:', error.stack);
+  }
+  if (response) {
+    console.error('Response Status:', response.status);
+    console.error('Response Body:', JSON.stringify(response.body, null, 2));
+  }
+};
+
+describe('Database Connection Tests', () => {
+
+  test('DB Connection - Pool should be connected', async () => {
+    const testName = 'Database Pool Connection';
+    try {
+      console.log('\n🔍 Testing database pool connection...');
+      const client = await pool.connect();
+      console.log('✅ Successfully acquired client from pool');
+
+      const result = await client.query('SELECT NOW() as current_time, version() as pg_version');
+      console.log('Database Time:', result.rows[0].current_time);
+      console.log('PostgreSQL Version:', result.rows[0].pg_version);
+
+      client.release();
+      console.log('✅ Client released back to pool');
+
+      logTestResult(testName, true, {
+        currentTime: result.rows[0].current_time,
+        version: result.rows[0].pg_version
+      });
+
+      expect(result.rows[0]).toHaveProperty('current_time');
+    } catch (error) {
+      logError(testName, error);
+      throw error;
+    }
+  });
+
+  test('DB Connection - Tables should exist', async () => {
+    const testName = 'Database Tables Existence';
+    try {
+      console.log('\n🔍 Checking if required tables exist...');
+
+      const tablesQuery = `
+        SELECT table_name 
+        FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name IN ('users', 'meals')
+        ORDER BY table_name;
+      `;
+
+      const result = await pool.query(tablesQuery);
+      const tableNames = result.rows.map(row => row.table_name);
+
+      console.log('Found tables:', tableNames);
+
+      const hasUsers = tableNames.includes('users');
+      const hasMeals = tableNames.includes('meals');
+
+      if (hasUsers) console.log('✅ users table exists');
+      else console.error('❌ users table NOT found');
+
+      if (hasMeals) console.log('✅ meals table exists');
+      else console.error('❌ meals table NOT found');
+
+      logTestResult(testName, hasUsers && hasMeals, { tables: tableNames });
+
+      expect(hasUsers).toBe(true);
+      expect(hasMeals).toBe(true);
+    } catch (error) {
+      logError(testName, error);
+      throw error;
+    }
+  });
+
+  test('DB Connection - Health endpoint should report connection status', async () => {
+    const testName = 'Health Endpoint';
+    try {
+      console.log('\n🔍 Testing /api/health endpoint...');
+
+      const res = await request(app).get('/api/health');
+
+      console.log('Health Status:', res.body.status);
+      console.log('DB Init Error:', res.body.dbInitError || 'None');
+
+      logTestResult(testName, res.status === 200 && res.body.status === 'ok', {
+        status: res.body.status,
+        dbInitError: res.body.dbInitError
+      });
+
+      expect(res.status).toBe(200);
+      expect(res.body.status).toBe('ok');
+      expect(res.body.dbInitError).toBeNull();
+    } catch (error) {
+      logError(testName, error);
+      throw error;
+    }
+  });
+
+  test('DB Connection - Debug endpoint should show connection details', async () => {
+    const testName = 'Debug Connection Endpoint';
+    try {
+      console.log('\n🔍 Testing /api/debug/connection endpoint...');
+
+      const res = await request(app).get('/api/debug/connection');
+
+      console.log('Connection Status:', res.body.status);
+      console.log('Connection Config:', res.body.config);
+
+      if (res.body.status === 'success') {
+        console.log('✅ Database connection successful');
+        console.log('Server IP:', res.body.server_ip || 'Unix socket (no IP)');
+      } else {
+        console.error('❌ Database connection failed');
+        console.error('Error:', res.body.message);
+      }
+
+      logTestResult(testName, res.body.status === 'success', {
+        status: res.body.status,
+        config: res.body.config,
+        message: res.body.message
+      });
+
+      expect(res.body.status).toBe('success');
+    } catch (error) {
+      logError(testName, error);
+      throw error;
+    }
+  });
+});
+
+describe('API CRUD Tests', () => {
+
+  // Run once before all tests
+  beforeAll(async () => {
+    console.log('\n🔧 Setting up test user...');
+    try {
+      const res = await request(app)
+        .post('/api/users')
+        .send(testUser);
+
+      if (res.status !== 200) {
+        console.error("❌ Failed to setup test user:", res.body);
+        throw new Error("Could not create test user");
+      }
+      console.log('✅ Test user created:', TEST_USER_ID);
+    } catch (error) {
+      logError('Test Setup', error);
+      throw error;
+    }
+  });
+
+  // Cleanup after tests
+  afterAll(async () => {
+    console.log('\n🧹 Cleaning up test data...');
+    try {
+      await pool.query('DELETE FROM meals WHERE user_id = $1', [TEST_USER_ID]);
+      console.log('✅ Deleted test meals');
+
+      await pool.query('DELETE FROM users WHERE id = $1', [TEST_USER_ID]);
+      console.log('✅ Deleted test user');
+
+      await pool.end();
+      console.log('✅ Database pool closed');
+    } catch (error) {
+      console.error('❌ Cleanup error:', error.message);
+    }
+  });
+
+  test('POST /api/meals - Create a new meal', async () => {
+    const testName = 'Create Meal';
+    try {
+      console.log('\n🔍 Testing meal creation...');
+
+      const res = await request(app)
+        .post('/api/meals')
+        .send({
+          userId: TEST_USER_ID,
+          meal: testMeal
+        });
+
+      console.log('Response Status:', res.status);
+      console.log('Created Meal:', res.body);
+
+      logTestResult(testName, res.status === 200, {
+        mealId: res.body.id,
+        mealName: res.body.name
+      });
+
+      expect(res.status).toBe(200);
+      expect(res.body.id).toBe(TEST_MEAL_ID);
+      expect(res.body.name).toBe(testMeal.name);
+      expect(res.body.calories).toBe(testMeal.calories);
+    } catch (error) {
+      logError(testName, error);
+      throw error;
+    }
+  });
+
+  test('GET /api/meals - Retrieve meals for user', async () => {
+    const testName = 'Retrieve Meals';
+    try {
+      console.log('\n🔍 Testing meal retrieval...');
+
+      const res = await request(app)
+        .get(`/api/meals?userId=${TEST_USER_ID}`);
+
+      console.log('Response Status:', res.status);
+      console.log('Number of meals:', res.body.length);
+
+      const found = res.body.find(m => m.id === TEST_MEAL_ID);
+      if (found) {
+        console.log('✅ Found test meal:', found.name);
+      } else {
+        console.error('❌ Test meal not found in results');
+      }
+
+      logTestResult(testName, res.status === 200 && found, {
+        totalMeals: res.body.length,
+        foundTestMeal: !!found
+      });
+
+      expect(res.status).toBe(200);
+      expect(Array.isArray(res.body)).toBe(true);
+      expect(res.body.length).toBeGreaterThan(0);
+      expect(found).toBeTruthy();
+      expect(found.name).toBe(testMeal.name);
+    } catch (error) {
+      logError(testName, error);
+      throw error;
+    }
+  });
+
+  test('PUT /api/meals/:id - Update an existing meal', async () => {
+    const testName = 'Update Meal';
+    const updatedName = 'Updated Avocado Toast';
+    const updatedCalories = 400;
+
+    try {
+      console.log('\n🔍 Testing meal update...');
+      console.log('Updating to:', { name: updatedName, calories: updatedCalories });
+
+      const res = await request(app)
+        .put(`/api/meals/${TEST_MEAL_ID}`)
+        .send({
+          userId: TEST_USER_ID,
+          meal: {
+            ...testMeal,
+            name: updatedName,
+            calories: updatedCalories
+          }
+        });
+
+      console.log('Update Response Status:', res.status);
+
+      // Verify the update
+      const checkRes = await request(app).get(`/api/meals?userId=${TEST_USER_ID}`);
+      const found = checkRes.body.find(m => m.id === TEST_MEAL_ID);
+
+      if (found) {
+        console.log('✅ Meal updated successfully');
+        console.log('New values:', { name: found.name, calories: found.calories });
+      } else {
+        console.error('❌ Updated meal not found');
+      }
+
+      logTestResult(testName, res.status === 200 && found.name === updatedName, {
+        updatedName: found?.name,
+        updatedCalories: found?.calories
+      });
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(found.name).toBe(updatedName);
+      expect(found.calories).toBe(updatedCalories);
+    } catch (error) {
+      logError(testName, error);
+      throw error;
+    }
+  });
+
+  test('DELETE /api/meals/:id - Delete a meal', async () => {
+    const testName = 'Delete Meal';
+    try {
+      console.log('\n🔍 Testing meal deletion...');
+
+      const res = await request(app)
+        .delete(`/api/meals/${TEST_MEAL_ID}?userId=${TEST_USER_ID}`);
+
+      console.log('Delete Response Status:', res.status);
+
+      // Verify deletion
+      const checkRes = await request(app).get(`/api/meals?userId=${TEST_USER_ID}`);
+      const found = checkRes.body.find(m => m.id === TEST_MEAL_ID);
+
+      if (!found) {
+        console.log('✅ Meal deleted successfully');
+      } else {
+        console.error('❌ Meal still exists after deletion');
+      }
+
+      logTestResult(testName, res.status === 200 && !found, {
+        deleted: !found
+      });
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(found).toBeUndefined();
+    } catch (error) {
+      logError(testName, error);
+      throw error;
+    }
+  });
+});
+
+describe('AI Estimation Tests', () => {
+
+  // Test cases with expected results
+  const textTestCases = [
+    {
+      description: 'grilled chicken breast with rice',
+      expectedFields: ['name', 'calories', 'protein', 'carbs', 'fat', 'sugar', 'confidence'],
+      minCalories: 300,
+      maxCalories: 600,
+      minProtein: 30,
+      testName: 'Simple protein meal'
+    },
+    {
+      description: 'chocolate chip cookie',
+      expectedFields: ['name', 'calories', 'protein', 'carbs', 'fat', 'sugar', 'confidence'],
+      minCalories: 100,
+      maxCalories: 300,
+      minSugar: 10,
+      testName: 'Sweet snack'
+    },
+    {
+      description: 'caesar salad with dressing',
+      expectedFields: ['name', 'calories', 'protein', 'carbs', 'fat', 'sugar', 'confidence'],
+      minCalories: 200,
+      maxCalories: 500,
+      testName: 'Salad with dressing'
+    }
+  ];
+
+  test('AI Text Analysis - Should return structured nutrition data', async () => {
+    const testName = 'AI Text Analysis - All Test Cases';
+    console.log('\n🤖 Testing AI text analysis endpoint...\n');
+
+    let allPassed = true;
+    const results = [];
+
+    for (const testCase of textTestCases) {
+      try {
+        console.log(`\n📝 Test Case: ${testCase.testName}`);
+        console.log(`Input: "${testCase.description}"`);
+
+        const res = await request(app)
+          .post('/api/analyze/text')
+          .send({ description: testCase.description })
+          .timeout(10000); // 10 second timeout for AI calls
+
+        console.log('Response Status:', res.status);
+
+        if (res.status !== 200) {
+          console.error('❌ Failed with status:', res.status);
+          console.error('Error:', res.body);
+          allPassed = false;
+          results.push({ testCase: testCase.testName, passed: false, error: res.body });
+          continue;
+        }
+
+        console.log('AI Response:', JSON.stringify(res.body, null, 2));
+
+        // Validate all required fields exist
+        const hasAllFields = testCase.expectedFields.every(field =>
+          res.body.hasOwnProperty(field)
+        );
+
+        if (!hasAllFields) {
+          console.error('❌ Missing required fields');
+          const missingFields = testCase.expectedFields.filter(f => !res.body.hasOwnProperty(f));
+          console.error('Missing:', missingFields);
+          allPassed = false;
+          results.push({ testCase: testCase.testName, passed: false, missingFields });
+          continue;
+        }
+
+        // Validate data types
+        const validTypes =
+          typeof res.body.name === 'string' &&
+          typeof res.body.calories === 'number' &&
+          typeof res.body.protein === 'number' &&
+          typeof res.body.carbs === 'number' &&
+          typeof res.body.fat === 'number' &&
+          typeof res.body.sugar === 'number' &&
+          typeof res.body.confidence === 'number';
+
+        if (!validTypes) {
+          console.error('❌ Invalid data types in response');
+          allPassed = false;
+          results.push({ testCase: testCase.testName, passed: false, error: 'Invalid types' });
+          continue;
+        }
+
+        // Validate ranges
+        let rangeValid = true;
+        if (testCase.minCalories && res.body.calories < testCase.minCalories) {
+          console.warn(`⚠️  Calories (${res.body.calories}) below expected minimum (${testCase.minCalories})`);
+          rangeValid = false;
+        }
+        if (testCase.maxCalories && res.body.calories > testCase.maxCalories) {
+          console.warn(`⚠️  Calories (${res.body.calories}) above expected maximum (${testCase.maxCalories})`);
+          rangeValid = false;
+        }
+        if (testCase.minProtein && res.body.protein < testCase.minProtein) {
+          console.warn(`⚠️  Protein (${res.body.protein}g) below expected minimum (${testCase.minProtein}g)`);
+          rangeValid = false;
+        }
+        if (testCase.minSugar && res.body.sugar < testCase.minSugar) {
+          console.warn(`⚠️  Sugar (${res.body.sugar}g) below expected minimum (${testCase.minSugar}g)`);
+          rangeValid = false;
+        }
+
+        if (rangeValid) {
+          console.log('✅ All validations passed');
+          console.log(`   Name: ${res.body.name}`);
+          console.log(`   Calories: ${res.body.calories} kcal`);
+          console.log(`   Protein: ${res.body.protein}g, Carbs: ${res.body.carbs}g, Fat: ${res.body.fat}g, Sugar: ${res.body.sugar}g`);
+          console.log(`   Confidence: ${res.body.confidence}%`);
+        }
+
+        results.push({
+          testCase: testCase.testName,
+          passed: rangeValid,
+          response: res.body
+        });
+
+        if (!rangeValid) allPassed = false;
+
+      } catch (error) {
+        console.error(`❌ Error in test case "${testCase.testName}":`, error.message);
+        logError(testCase.testName, error);
+        allPassed = false;
+        results.push({ testCase: testCase.testName, passed: false, error: error.message });
+      }
+    }
+
+    console.log('\n📊 AI Text Analysis Summary:');
+    results.forEach(r => {
+      console.log(`  ${r.passed ? '✅' : '❌'} ${r.testCase}`);
+    });
+
+    logTestResult(testName, allPassed, { results });
+
+    expect(allPassed).toBe(true);
+  });
+
+  test('AI Text Analysis - Should handle invalid input gracefully', async () => {
+    const testName = 'AI Text Analysis - Invalid Input';
+    try {
+      console.log('\n🔍 Testing AI with empty description...');
+
+      const res = await request(app)
+        .post('/api/analyze/text')
+        .send({ description: '' });
+
+      console.log('Response Status:', res.status);
+      console.log('Response Body:', res.body);
+
+      logTestResult(testName, res.status === 400, {
+        status: res.status,
+        error: res.body.error
+      });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe('Description required');
+    } catch (error) {
+      logError(testName, error);
+      throw error;
+    }
+  });
+
+  test('AI Image Analysis - Should handle missing image', async () => {
+    const testName = 'AI Image Analysis - Missing Image';
+    try {
+      console.log('\n🔍 Testing AI image endpoint without image...');
+
+      const res = await request(app)
+        .post('/api/analyze/image')
+        .send({});
+
+      console.log('Response Status:', res.status);
+      console.log('Response Body:', res.body);
+
+      logTestResult(testName, res.status === 400, {
+        status: res.status,
+        error: res.body.error
+      });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe('Image required');
+    } catch (error) {
+      logError(testName, error);
+      throw error;
+    }
+  });
+});
