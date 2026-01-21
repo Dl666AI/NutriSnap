@@ -66,12 +66,14 @@ export const UserService = {
    */
   async syncUser(user: User): Promise<User> {
     try {
-      // console.log('[UserService] Syncing user:', user);
+      console.log('[UserService] Syncing user (PAYLOAD):', JSON.stringify(user, null, 2));
       const response = await fetch('/api/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(user)
       });
+
+      console.log(`[UserService] Sync response status: ${response.status}`);
 
       if (!response.ok) {
         console.warn('Failed to sync user with server:', await response.text());

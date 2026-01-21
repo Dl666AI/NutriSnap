@@ -240,7 +240,15 @@ app.post('/api/users', async (req, res) => {
   `;
   const values = [user.id, user.name, user.email, user.photoUrl, user.height, user.weight, user.dateOfBirth || null, user.gender, user.goal, user.dailyCalories, user.dailyProtein, user.dailyCarbs, user.dailySugar];
   try {
+    // --- DEBUG LOGGING ---
+    console.log(`[API] POST /api/users received for ID: ${user.id}`);
+    console.log(`[API] Payload:`, JSON.stringify(user, null, 2));
+
     const result = await pool.query(query, values);
+
+    console.log(`[API] User UPSERT Result:`, result.rows[0]);
+    // ---------------------
+
     res.json(result.rows[0]);
   } catch (err) {
     res.status(500).json({ error: 'Database error', details: err.message });
