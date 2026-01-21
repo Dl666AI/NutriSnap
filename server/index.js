@@ -224,12 +224,21 @@ app.post('/api/users', async (req, res) => {
   // COALESCE(NULL, "") returns "", not NULL - perpetuating the issue
   // Solution: Convert empty strings and invalid values to NULL
   // ═══════════════════════════════════════════════════════════════
-  const sanitizeNumeric = (val) => {
-    // Convert "", undefined, null, 0, NaN to null
+
+  // For INTEGER columns (height, daily_calories, daily_protein, daily_carbs, daily_sugar)
+  const sanitizeInteger = (val) => {
     if (val === '' || val === undefined || val === null) return null;
     const num = Number(val);
-    if (isNaN(num) || num <= 0) return null; // Height/Weight can't be 0 or negative
-    return num;
+    if (isNaN(num) || num <= 0) return null;
+    return Math.round(num); // Round to integer!
+  };
+
+  // For NUMERIC/DECIMAL columns (weight)
+  const sanitizeNumeric = (val) => {
+    if (val === '' || val === undefined || val === null) return null;
+    const num = Number(val);
+    if (isNaN(num) || num <= 0) return null;
+    return num; // Keep decimals
   };
 
   const sanitizeString = (val) => {
@@ -245,15 +254,15 @@ app.post('/api/users', async (req, res) => {
     name: user.name || null,
     email: user.email || null,
     photoUrl: sanitizeString(user.photoUrl),
-    height: sanitizeNumeric(user.height),
-    weight: sanitizeNumeric(user.weight),
+    height: sanitizeInteger(user.height), // INTEGER column - must round
+    weight: sanitizeNumeric(user.weight), // NUMERIC column - keep decimals
     dateOfBirth: sanitizeString(user.dateOfBirth),
     gender: sanitizeString(user.gender),
     goal: sanitizeString(user.goal),
-    dailyCalories: sanitizeNumeric(user.dailyCalories),
-    dailyProtein: sanitizeNumeric(user.dailyProtein),
-    dailyCarbs: sanitizeNumeric(user.dailyCarbs),
-    dailySugar: sanitizeNumeric(user.dailySugar)
+    dailyCalories: sanitizeInteger(user.dailyCalories), // INTEGER
+    dailyProtein: sanitizeInteger(user.dailyProtein), // INTEGER
+    dailyCarbs: sanitizeInteger(user.dailyCarbs), // INTEGER
+    dailySugar: sanitizeInteger(user.dailySugar) // INTEGER
   };
 
   console.log('[API] POST /api/users - Original payload:', JSON.stringify(user, null, 2));
