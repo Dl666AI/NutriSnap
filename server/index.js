@@ -287,7 +287,10 @@ app.post('/api/users', async (req, res) => {
       daily_carbs = COALESCE(EXCLUDED.daily_carbs, users.daily_carbs), 
       daily_sugar = COALESCE(EXCLUDED.daily_sugar, users.daily_sugar), 
       updated_at = NOW()
-    RETURNING *;
+    RETURNING id, name, email, photo_url as "photoUrl", height, weight, 
+              date_of_birth as "dateOfBirth", gender, goal, 
+              daily_calories as "dailyCalories", daily_protein as "dailyProtein", 
+              daily_carbs as "dailyCarbs", daily_sugar as "dailySugar";
   `;
 
   const values = [
