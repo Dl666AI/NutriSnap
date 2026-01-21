@@ -35,7 +35,9 @@ export const UserService = {
   async getUser(userId: string): Promise<User | null> {
     try {
       console.log(`[UserService] Fetching user: ${userId}`);
-      const response = await fetch(`/api/users/${userId}`);
+      const url = `/api/users/${userId}`;
+      console.log(`[UserService] GET request to: ${url}`);
+      const response = await fetch(url);
 
       if (response.status === 404) {
         console.log('[UserService] User not found (404)');

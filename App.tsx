@@ -229,14 +229,20 @@ const App: React.FC = () => {
     localStorage.setItem('nutrisnap_user', JSON.stringify(mergedUser));
 
     // Sync to DB (will create if new, update if existing)
-    await UserService.syncUser(mergedUser);
+    // CRITICAL FIX: Use the response from syncUser as the source of truth.
+    // This ensures that if the initial getUser failed (e.g. cold start), we still get the data back from the UPSERT.
+    const syncedUser = await UserService.syncUser(mergedUser);
+
+    console.log('[App] Final Synced User:', syncedUser);
+    setUser(syncedUser);
+    localStorage.setItem('nutrisnap_user', JSON.stringify(syncedUser));
   };
 
   const handleUpdateUser = async (updatedUser: User) => {
-    setUser(updatedUser);
-    localStorage.setItem('nutrisnap_user', JSON.stringify(updatedUser));
     // Sync to DB
-    await UserService.syncUser(updatedUser);
+    const syncedUser = await UserService.syncUser(updatedUser);
+    setUser(syncedUser);
+    localStorage.setItem('nutrisnap_user', JSON.stringify(syncedUser));
   };
 
   const handleLogout = () => {
