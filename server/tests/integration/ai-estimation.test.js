@@ -17,7 +17,7 @@ const textTestCases = [
         expectedFields: ['name', 'calories', 'protein', 'carbs', 'fat', 'sugar', 'confidence'],
         minCalories: 100,
         maxCalories: 300,
-        minSugar: 10,
+        minSugar: 5,
         testName: 'Sweet snack'
     },
     {

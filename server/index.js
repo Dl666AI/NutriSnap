@@ -324,7 +324,7 @@ app.post('/api/analyze/image', async (req, res) => {
     const cleanBase64 = image.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, "");
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-2.0-flash',
       contents: {
         parts: [{ inlineData: { mimeType: 'image/jpeg', data: cleanBase64 } }, {
           text: `Identify this food item. Estimate calories and macros for a standard serving.
@@ -348,7 +348,7 @@ app.post('/api/analyze/text', async (req, res) => {
     const { description } = req.body;
     if (!description) return res.status(400).json({ error: 'Description required' });
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-2.0-flash',
       contents: {
         parts: [{
           text: `Analyze this food description: "${description}". 
