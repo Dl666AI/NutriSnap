@@ -186,6 +186,28 @@ app.get('/api/debug/connection', async (req, res) => {
 
 // --- DATA ROUTES ---
 
+app.get('/api/users/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const result = await pool.query(
+      `SELECT id, name, email, photo_url as "photoUrl", height, weight, 
+              date_of_birth as "dateOfBirth", gender, goal, 
+              daily_calories as "dailyCalories", daily_protein as "dailyProtein", 
+              daily_carbs as "dailyCarbs", daily_sugar as "dailySugar"
+       FROM users WHERE id = $1`,
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: 'Database error', details: err.message });
+  }
+});
+
 app.post('/api/users', async (req, res) => {
   const user = req.body;
   const query = `

@@ -29,12 +29,12 @@ const AppContent: React.FC<AppContentProps> = ({ user, onLogin, onLogout, onUpda
   const [previousTab, setPreviousTab] = useState<Screen>('HOME');
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [editingMeal, setEditingMeal] = useState<Meal | null>(null);
-  
+
   // Track which date we are adding a meal for
   const [targetDate, setTargetDate] = useState<string>(getTodayString());
   // Track specific meal type if adding from Diary (e.g. Lunch)
   const [targetMealType, setTargetMealType] = useState<Meal['type'] | undefined>(undefined);
-  
+
   // UI State for Add Menu
   const [isAddMenuOpen, setIsAddMenuOpen] = useState(false);
   const [shouldLaunchGallery, setShouldLaunchGallery] = useState(false);
@@ -43,13 +43,13 @@ const AppContent: React.FC<AppContentProps> = ({ user, onLogin, onLogout, onUpda
   const navigateTo = (screen: Screen) => {
     // If requesting ADD_MENU, don't change screen, just open overlay
     if (screen === 'ADD_MENU') {
-        setIsAddMenuOpen(true);
-        // Default target date to today if opened from general nav
-        if (currentScreen !== 'DIARY') {
-            setTargetDate(getTodayString());
-            setTargetMealType(undefined);
-        }
-        return;
+      setIsAddMenuOpen(true);
+      // Default target date to today if opened from general nav
+      if (currentScreen !== 'DIARY') {
+        setTargetDate(getTodayString());
+        setTargetMealType(undefined);
+      }
+      return;
     }
 
     // If navigating to a main tab, remember it
@@ -61,40 +61,40 @@ const AppContent: React.FC<AppContentProps> = ({ user, onLogin, onLogout, onUpda
 
   // Shortcut handler for the FAB (Center Camera Button)
   const handleFabClick = () => {
-      setEditingMeal(null);
-      setTargetDate(getTodayString()); // Always target today
-      setTargetMealType(undefined);    // No specific section implied
-      setShouldLaunchGallery(false);   // Always open camera directly
-      
-      // Ensure we can go back to where we came from
-      if (['HOME', 'DIARY', 'INSIGHTS', 'PROFILE'].includes(currentScreen)) {
-        setPreviousTab(currentScreen);
-      }
-      
-      setCurrentScreen('CAMERA');
+    setEditingMeal(null);
+    setTargetDate(getTodayString()); // Always target today
+    setTargetMealType(undefined);    // No specific section implied
+    setShouldLaunchGallery(false);   // Always open camera directly
+
+    // Ensure we can go back to where we came from
+    if (['HOME', 'DIARY', 'INSIGHTS', 'PROFILE'].includes(currentScreen)) {
+      setPreviousTab(currentScreen);
+    }
+
+    setCurrentScreen('CAMERA');
   };
 
   // Handler for adding from Diary (preserves selected date and type)
   const handleAddMealFromDiary = (date: string, type?: Meal['type']) => {
-      setTargetDate(date);
-      setTargetMealType(type);
-      setIsAddMenuOpen(true);
-      setPreviousTab('DIARY');
+    setTargetDate(date);
+    setTargetMealType(type);
+    setIsAddMenuOpen(true);
+    setPreviousTab('DIARY');
   };
 
   const handleMenuSelect = (option: 'CAMERA' | 'GALLERY' | 'MANUAL') => {
-      setIsAddMenuOpen(false);
-      
-      if (option === 'CAMERA') {
-          setShouldLaunchGallery(false);
-          setCurrentScreen('CAMERA');
-      } else if (option === 'GALLERY') {
-          setShouldLaunchGallery(true);
-          setCurrentScreen('CAMERA');
-      } else if (option === 'MANUAL') {
-          setEditingMeal(null);
-          setCurrentScreen('MANUAL_ENTRY');
-      }
+    setIsAddMenuOpen(false);
+
+    if (option === 'CAMERA') {
+      setShouldLaunchGallery(false);
+      setCurrentScreen('CAMERA');
+    } else if (option === 'GALLERY') {
+      setShouldLaunchGallery(true);
+      setCurrentScreen('CAMERA');
+    } else if (option === 'MANUAL') {
+      setEditingMeal(null);
+      setCurrentScreen('MANUAL_ENTRY');
+    }
   };
 
   const handleCapture = (imageSrc?: string) => {
@@ -115,65 +115,65 @@ const AppContent: React.FC<AppContentProps> = ({ user, onLogin, onLogout, onUpda
         return <SplashScreen onComplete={() => navigateTo('HOME')} />;
       case 'HOME':
         return (
-          <HomeScreen 
-            onNavigate={navigateTo} 
-            user={user} 
-            onEdit={handleEditMeal} 
-            onFabClick={handleFabClick} 
+          <HomeScreen
+            onNavigate={navigateTo}
+            user={user}
+            onEdit={handleEditMeal}
+            onFabClick={handleFabClick}
           />
         );
       case 'DIARY':
         return (
-          <DiaryScreen 
-            onNavigate={navigateTo} 
-            onEdit={handleEditMeal} 
-            onAddMeal={handleAddMealFromDiary} 
-            onFabClick={handleFabClick} 
+          <DiaryScreen
+            onNavigate={navigateTo}
+            onEdit={handleEditMeal}
+            onAddMeal={handleAddMealFromDiary}
+            onFabClick={handleFabClick}
           />
         );
       case 'INSIGHTS':
         return (
-          <InsightsScreen 
-            onNavigate={navigateTo} 
+          <InsightsScreen
+            onNavigate={navigateTo}
             user={user}
-            onFabClick={handleFabClick} 
+            onFabClick={handleFabClick}
           />
         );
       case 'CAMERA':
         return (
-            <CameraScreen 
-                onCapture={handleCapture} 
-                onCancel={() => setCurrentScreen(previousTab)} 
-                onManualEntry={() => { setEditingMeal(null); setCurrentScreen('MANUAL_ENTRY'); }}
-                autoLaunchGallery={shouldLaunchGallery}
-            />
+          <CameraScreen
+            onCapture={handleCapture}
+            onCancel={() => setCurrentScreen(previousTab)}
+            onManualEntry={() => { setEditingMeal(null); setCurrentScreen('MANUAL_ENTRY'); }}
+            autoLaunchGallery={shouldLaunchGallery}
+          />
         );
       case 'MANUAL_ENTRY':
         return (
-            <ManualEntryScreen 
-                mealToEdit={editingMeal}
-                targetDate={targetDate}
-                initialType={targetMealType}
-                onSave={() => { setEditingMeal(null); setCurrentScreen(previousTab); }} 
-                onCancel={() => { setEditingMeal(null); setCurrentScreen(previousTab); }} 
-            />
+          <ManualEntryScreen
+            mealToEdit={editingMeal}
+            targetDate={targetDate}
+            initialType={targetMealType}
+            onSave={() => { setEditingMeal(null); setCurrentScreen(previousTab); }}
+            onCancel={() => { setEditingMeal(null); setCurrentScreen(previousTab); }}
+          />
         );
       case 'RESULT':
         return (
-          <ResultScreen 
-            image={capturedImage} 
-            targetDate={targetDate} 
+          <ResultScreen
+            image={capturedImage}
+            targetDate={targetDate}
             initialType={targetMealType}
-            onSave={() => setCurrentScreen(previousTab)} 
-            onRetake={() => setCurrentScreen('CAMERA')} 
+            onSave={() => setCurrentScreen(previousTab)}
+            onRetake={() => setCurrentScreen('CAMERA')}
             onManualEntry={() => { setEditingMeal(null); setCurrentScreen('MANUAL_ENTRY'); }}
           />
         );
       case 'PROFILE':
         return (
-          <ProfileScreen 
-            onNavigate={navigateTo} 
-            user={user} 
+          <ProfileScreen
+            onNavigate={navigateTo}
+            user={user}
             onLogout={onLogout}
             onLogin={onLogin}
             onUpdateUser={onUpdateUser}
@@ -182,10 +182,10 @@ const AppContent: React.FC<AppContentProps> = ({ user, onLogin, onLogout, onUpda
         );
       default:
         return (
-          <HomeScreen 
-            onNavigate={navigateTo} 
-            user={user} 
-            onEdit={handleEditMeal} 
+          <HomeScreen
+            onNavigate={navigateTo}
+            user={user}
+            onEdit={handleEditMeal}
             onFabClick={handleFabClick}
           />
         );
@@ -196,10 +196,10 @@ const AppContent: React.FC<AppContentProps> = ({ user, onLogin, onLogout, onUpda
     <div className="font-display">
       {renderScreen()}
       {isAddMenuOpen && (
-          <AddMenu 
-            onClose={() => setIsAddMenuOpen(false)} 
-            onSelectOption={handleMenuSelect} 
-          />
+        <AddMenu
+          onClose={() => setIsAddMenuOpen(false)}
+          onSelectOption={handleMenuSelect}
+        />
       )}
     </div>
   );
@@ -216,10 +216,20 @@ const App: React.FC = () => {
   });
 
   const handleLogin = async (newUser: User) => {
-    setUser(newUser);
-    localStorage.setItem('nutrisnap_user', JSON.stringify(newUser));
-    // Sync to DB
-    await UserService.syncUser(newUser);
+    // Try to fetch existing user data from database
+    const existingUser = await UserService.getUser(newUser.id);
+
+    // Merge: Use database data if available, otherwise use new user data
+    // Fresh Google profile data (name, email, photoUrl) takes precedence
+    const mergedUser = existingUser
+      ? { ...existingUser, ...newUser } // DB data as base, override with fresh Google profile
+      : newUser; // New user, use as-is
+
+    setUser(mergedUser);
+    localStorage.setItem('nutrisnap_user', JSON.stringify(mergedUser));
+
+    // Sync to DB (will create if new, update if existing)
+    await UserService.syncUser(mergedUser);
   };
 
   const handleUpdateUser = async (updatedUser: User) => {
@@ -245,20 +255,20 @@ const App: React.FC = () => {
           1. No stale state from the previous user leaks into the new session.
           2. The initialization logic in DataProvider runs fresh for the new user ID.
         */}
-        <DataProvider 
-          userId={user?.id || null} 
-          targetCalories={user?.dailyCalories} 
+        <DataProvider
+          userId={user?.id || null}
+          targetCalories={user?.dailyCalories}
           customTargets={{
             protein: user?.dailyProtein,
             sugar: user?.dailySugar
           }}
           key={user?.id || 'guest'}
         >
-          <AppContent 
-              user={user} 
-              onLogin={handleLogin} 
-              onLogout={handleLogout} 
-              onUpdateUser={handleUpdateUser} 
+          <AppContent
+            user={user}
+            onLogin={handleLogin}
+            onLogout={handleLogout}
+            onUpdateUser={handleUpdateUser}
           />
         </DataProvider>
       </LanguageProvider>
