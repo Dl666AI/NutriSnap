@@ -131,6 +131,12 @@ pool.connect((err, client, release) => {
 app.use(cors());
 app.use(bodyParser.json({ limit: '50mb' }));
 
+// Request logging middleware
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+  next();
+});
+
 // Initialize Gemini
 // We allow a fallback key to prevent server crash on startup if key is missing
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || 'placeholder_key' });
