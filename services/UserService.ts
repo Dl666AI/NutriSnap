@@ -18,6 +18,10 @@ const parseUserResponse = (data: any): User => {
   return {
     ...data,
     // Explicitly map potentially ambiguous fields
+    photoUrl: getVal('photoUrl', 'photo_url'),
+    dateOfBirth: getVal('dateOfBirth', 'date_of_birth'),
+    gender: getVal('gender', 'gender'),
+    goal: getVal('goal', 'goal'),
     weight: parseNum(getVal('weight', 'weight')),
     height: parseNum(getVal('height', 'height')),
     dailyCalories: parseNum(getVal('dailyCalories', 'daily_calories')),
