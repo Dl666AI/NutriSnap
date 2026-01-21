@@ -3,25 +3,38 @@ import { User } from '../types';
 
 // Helper to ensure numeric fields are numbers (DB returns strings for numerics)
 // Also handles potential case sensitivity issues or missing aliases
+// CRITICAL FIX: Also treats empty strings as undefined (DB may have "" instead of NULL)
 const parseUserResponse = (data: any): User => {
   // Helper to get value from either camelCase or snake_case key
   const getVal = (key: string, altKey: string) => {
     return data[key] !== undefined ? data[key] : data[altKey];
   };
 
-  const parseNum = (val: any) => {
+  // Parse numeric values - treat empty strings as undefined
+  const parseNum = (val: any): number | undefined => {
     if (val === null || val === undefined || val === '') return undefined;
+    // Extra safety: if it's a string that's just whitespace, treat as undefined
+    if (typeof val === 'string' && val.trim() === '') return undefined;
     const num = Number(val);
-    return isNaN(num) ? undefined : num;
+    return isNaN(num) || num <= 0 ? undefined : num;
   };
 
-  return {
-    ...data,
-    // Explicitly map potentially ambiguous fields
-    photoUrl: getVal('photoUrl', 'photo_url'),
-    dateOfBirth: getVal('dateOfBirth', 'date_of_birth'),
-    gender: getVal('gender', 'gender'),
-    goal: getVal('goal', 'goal'),
+  // Parse string values - treat empty strings as undefined
+  const parseStr = (val: any): string | undefined => {
+    if (val === null || val === undefined) return undefined;
+    if (typeof val === 'string' && val.trim() === '') return undefined;
+    return val;
+  };
+
+  const parsed: User = {
+    id: data.id,
+    name: data.name || 'User',
+    email: data.email || '',
+    // Explicitly map potentially ambiguous fields with empty string handling
+    photoUrl: parseStr(getVal('photoUrl', 'photo_url')),
+    dateOfBirth: parseStr(getVal('dateOfBirth', 'date_of_birth')),
+    gender: parseStr(getVal('gender', 'gender')) as 'male' | 'female' | undefined,
+    goal: parseStr(getVal('goal', 'goal')) as User['goal'],
     weight: parseNum(getVal('weight', 'weight')),
     height: parseNum(getVal('height', 'height')),
     dailyCalories: parseNum(getVal('dailyCalories', 'daily_calories')),
@@ -29,6 +42,11 @@ const parseUserResponse = (data: any): User => {
     dailyCarbs: parseNum(getVal('dailyCarbs', 'daily_carbs')),
     dailySugar: parseNum(getVal('dailySugar', 'daily_sugar')),
   };
+
+  console.log('[UserService] parseUserResponse - Input:', JSON.stringify(data, null, 2));
+  console.log('[UserService] parseUserResponse - Output:', JSON.stringify(parsed, null, 2));
+
+  return parsed;
 };
 
 export const UserService = {

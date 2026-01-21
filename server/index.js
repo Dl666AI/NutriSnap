@@ -165,6 +165,32 @@ app.get('/api/health', async (req, res) => {
   res.json({ status: 'ok', dbInitError });
 });
 
+// One-time cleanup: Convert empty strings to NULL in users table
+app.post('/api/admin/cleanup-empty-strings', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      UPDATE users SET 
+        weight = CASE WHEN weight::text = '' THEN NULL ELSE weight END,
+        height = CASE WHEN height::text = '' THEN NULL ELSE height END,
+        date_of_birth = CASE WHEN date_of_birth::text = '' THEN NULL ELSE date_of_birth END,
+        gender = NULLIF(gender, ''),
+        goal = NULLIF(goal, ''),
+        daily_calories = CASE WHEN daily_calories::text = '' THEN NULL ELSE daily_calories END,
+        daily_protein = CASE WHEN daily_protein::text = '' THEN NULL ELSE daily_protein END,
+        daily_carbs = CASE WHEN daily_carbs::text = '' THEN NULL ELSE daily_carbs END,
+        daily_sugar = CASE WHEN daily_sugar::text = '' THEN NULL ELSE daily_sugar END,
+        photo_url = NULLIF(photo_url, ''),
+        updated_at = NOW()
+      RETURNING id
+    `);
+    console.log('[Admin] Cleaned up empty strings for', result.rowCount, 'users');
+    res.json({ success: true, usersUpdated: result.rowCount });
+  } catch (err) {
+    console.error('[Admin] Cleanup failed:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.get('/api/debug/connection', async (req, res) => {
   // Try connecting with a fresh client to test current config
   const client = new pg.Client(dbConfig);
