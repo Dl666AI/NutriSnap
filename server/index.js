@@ -210,13 +210,26 @@ app.get('/api/users/:id', async (req, res) => {
 
 app.post('/api/users', async (req, res) => {
   const user = req.body;
+
+  // Use COALESCE in the UPDATE clause to preserve existing values if the new ones are null/undefined.
+  // This prevents accidental wiping of stats if the client sends a partial user object.
   const query = `
     INSERT INTO users (id, name, email, photo_url, height, weight, date_of_birth, gender, goal, daily_calories, daily_protein, daily_carbs, daily_sugar)
     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
     ON CONFLICT (id) DO UPDATE SET
-      name = EXCLUDED.name, email = EXCLUDED.email, photo_url = EXCLUDED.photo_url, height = EXCLUDED.height, weight = EXCLUDED.weight,
-      date_of_birth = EXCLUDED.date_of_birth, gender = EXCLUDED.gender, goal = EXCLUDED.goal, daily_calories = EXCLUDED.daily_calories,
-      daily_protein = EXCLUDED.daily_protein, daily_carbs = EXCLUDED.daily_carbs, daily_sugar = EXCLUDED.daily_sugar, updated_at = NOW()
+      name = EXCLUDED.name, 
+      email = EXCLUDED.email, 
+      photo_url = EXCLUDED.photo_url, 
+      height = COALESCE(EXCLUDED.height, users.height), 
+      weight = COALESCE(EXCLUDED.weight, users.weight),
+      date_of_birth = COALESCE(EXCLUDED.date_of_birth, users.date_of_birth), 
+      gender = COALESCE(EXCLUDED.gender, users.gender), 
+      goal = COALESCE(EXCLUDED.goal, users.goal), 
+      daily_calories = COALESCE(EXCLUDED.daily_calories, users.daily_calories),
+      daily_protein = COALESCE(EXCLUDED.daily_protein, users.daily_protein), 
+      daily_carbs = COALESCE(EXCLUDED.daily_carbs, users.daily_carbs), 
+      daily_sugar = COALESCE(EXCLUDED.daily_sugar, users.daily_sugar), 
+      updated_at = NOW()
     RETURNING *;
   `;
   const values = [user.id, user.name, user.email, user.photoUrl, user.height, user.weight, user.dateOfBirth || null, user.gender, user.goal, user.dailyCalories, user.dailyProtein, user.dailyCarbs, user.dailySugar];
