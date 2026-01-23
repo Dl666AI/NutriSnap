@@ -41,10 +41,11 @@ COPY server/config/ ./config/
 
 
 # Copy built frontend from builder stage
-COPY --from=frontend-builder /app/dist /app/dist
+# CRITICAL: We copy to /app/public instead of /app/dist because Cloud Run mounts a volume at /app/dist
+COPY --from=frontend-builder /app/dist /app/public
 
-# DEBUG: Verify dist exists and has content
-RUN ls -la /app/dist && ls -la /app/dist/assets || echo "Dist missing!"
+# DEBUG: Verify public exists and has content
+RUN ls -la /app/public && ls -la /app/public/assets || echo "Public folder missing!"
 
 # Cloud Run sets PORT env var
 ENV NODE_ENV=production
