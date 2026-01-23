@@ -34,12 +34,16 @@ const poolConfig: PoolConfig = {
 
     // SSL Configuration for GCP Cloud SQL
     // Required if your GCP instance has "Allow only SSL connections" enabled.
-    ssl: isProduction ? {
-        rejectUnauthorized: false, // Set to true if you provide the server-ca.pem
-        ca: fs.readFileSync(path.join(__dirname, '../../certs/server-ca.pem')).toString(),
-        key: fs.readFileSync(path.join(__dirname, '../../certs/client-key.pem')).toString(),
-        cert: fs.readFileSync(path.join(__dirname, '../../certs/client-cert.pem')).toString(),
-    } : false, // Disable SSL for local dev unless you've set up local certificates
+    ssl: isProduction ? (
+        fs.existsSync(path.join(__dirname, '../../certs/server-ca.pem')) ? {
+            rejectUnauthorized: true,
+            ca: fs.readFileSync(path.join(__dirname, '../../certs/server-ca.pem')).toString(),
+            key: fs.readFileSync(path.join(__dirname, '../../certs/client-key.pem')).toString(),
+            cert: fs.readFileSync(path.join(__dirname, '../../certs/client-cert.pem')).toString(),
+        } : {
+            rejectUnauthorized: false
+        }
+    ) : false,
 };
 
 const pool = new Pool(poolConfig);
