@@ -61,23 +61,32 @@ export const UserService = {
       console.log(`[UserService] GET request to: ${url}`);
       const response = await fetch(url);
 
+      // CRITICAL CHECK: Did we get HTML back? (Common deployment issue)
+      const contentType = response.headers.get("content-type");
+      if (contentType && contentType.includes("text/html")) {
+        console.error('[UserService] CRITICAL ERROR: Received HTML instead of JSON. Request likely routed to frontend index.html.');
+        console.error('[UserService] This often means the API endpoint is 404ing at the proxy level.');
+        return null; // Return null to prevent crashing the app with syntax error
+      }
+
       if (response.status === 404) {
         console.log('[UserService] User not found (404)');
         return null; // User not found in DB
       }
 
       if (!response.ok) {
-        console.warn('Failed to fetch user from server:', await response.text());
+        console.warn('Failed to fetch user from server:', response.status, await response.text());
         return null;
       }
 
       const data = await response.json();
-      console.log('[UserService] Raw DB Data:', data);
+      console.log('[UserService] Raw DB Data:', JSON.stringify(data, null, 2));
 
       const parsed = parseUserResponse(data);
-      console.log('[UserService] Parsed Data:', parsed);
+      console.log('[UserService] Parsed Data:', JSON.stringify(parsed, null, 2));
       return parsed;
     } catch (e) {
+      console.error('[UserService] User fetch EXCEPTION:', e);
       console.warn('User fetch error (running offline):', e);
       return null;
     }
@@ -100,15 +109,15 @@ export const UserService = {
       console.log(`[UserService] Sync response status: ${response.status}`);
 
       if (!response.ok) {
-        console.warn('Failed to sync user with server:', await response.text());
+        console.warn('Failed to sync user with server:', response.status, await response.text());
         return user; // Return local version on fail
       }
 
       const data = await response.json();
-      console.log('[UserService] Sync Raw DB Response:', data);
+      console.log('[UserService] Sync SUCCESS - Raw Response:', JSON.stringify(data, null, 2));
       return parseUserResponse(data);
     } catch (e) {
-      console.warn('User sync error (running offline):', e);
+      console.error('[UserService] Sync EXCEPTION:', e);
       return user;
     }
   }

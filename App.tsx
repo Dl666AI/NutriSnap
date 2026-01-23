@@ -258,11 +258,12 @@ const App: React.FC = () => {
           console.log('[App] STARTUP: User not found in DB (new user)');
         }
       } catch (error) {
-        console.warn('[App] STARTUP: Failed to refresh user from DB:', error);
+        console.error('[App] STARTUP ERROR: Failed to refresh user from DB:', error);
         // Don't crash - keep using localStorage data
       }
     };
 
+    console.log('[App] MOUNTED. Triggering user refresh...');
     refreshUserFromDB();
   }, []); // Run once on mount
 
