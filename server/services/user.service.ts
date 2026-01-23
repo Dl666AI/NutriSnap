@@ -1,5 +1,6 @@
 import { UserRepository } from '../repositories/user.repo';
 import { User, mapDbToUser, DbUser } from '../src/shared/users_schema';
+import { WeightHistoryEntry, mapDbToWeightHistory } from '../src/shared/weight_history_schema';
 
 /**
  * SERVICE: User Profiles
@@ -196,5 +197,15 @@ export class UserService {
         if (typeof val === 'string' && val.trim() === '') return null;
         if (val === undefined || val === null) return null;
         return val;
+    }
+
+    /**
+     * Get weight history for a user.
+     * @param userId - The user's ID
+     * @returns Array of WeightHistoryEntry
+     */
+    async getWeightHistory(userId: string): Promise<WeightHistoryEntry[]> {
+        const history = await this.userRepo.getWeightHistory(userId);
+        return history.map(mapDbToWeightHistory);
     }
 }

@@ -240,6 +240,24 @@ app.get('/api/users/:id', async (req, res) => {
   }
 });
 
+app.get('/api/users/:userId/weight-history', async (req, res) => {
+  const { userId } = req.params;
+  try {
+    const result = await pool.query(
+      'SELECT * FROM weight_history WHERE user_id = $1 ORDER BY date DESC LIMIT 20',
+      [userId]
+    );
+    res.json(result.rows.map(row => ({
+      id: row.id,
+      userId: row.user_id,
+      weight: Number(row.weight),
+      date: row.date
+    })));
+  } catch (err) {
+    res.status(500).json({ error: 'Database error', details: err.message });
+  }
+});
+
 app.post('/api/users', async (req, res) => {
   const user = req.body;
 
@@ -341,6 +359,85 @@ app.post('/api/users', async (req, res) => {
     res.json(result.rows[0]);
   } catch (err) {
     console.error('[API] User UPSERT Error:', err);
+    res.status(500).json({ error: 'Database error', details: err.message });
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // WEIGHT HISTORY TRACKING
+  // ═══════════════════════════════════════════════════════════════
+  if (sanitizedUser.weight) {
+    try {
+      await pool.query(
+        'INSERT INTO weight_history (user_id, weight) VALUES ($1, $2)',
+        [sanitizedUser.id, sanitizedUser.weight]
+      );
+    } catch (err) {
+      console.error('[API] Failed to record weight history:', err.message);
+      // Non-blocking error
+    }
+  }
+});
+
+app.put('/api/users/:id', async (req, res) => {
+  const { id } = req.params;
+  const updates = req.body;
+
+  try {
+    const fields = [];
+    const values = [];
+    let paramCount = 1;
+
+    // Helper to add field if present
+    const addField = (col, val) => {
+      if (val !== undefined) {
+        fields.push(`${col} = $${paramCount}`);
+        values.push(val);
+        paramCount++;
+      }
+    };
+
+    if (updates.name !== undefined) addField('name', updates.name);
+    if (updates.email !== undefined) addField('email', updates.email);
+    if (updates.photoUrl !== undefined) addField('photo_url', updates.photoUrl);
+    if (updates.height !== undefined) addField('height', updates.height);
+    if (updates.weight !== undefined) addField('weight', updates.weight);
+    if (updates.dateOfBirth !== undefined) addField('date_of_birth', updates.dateOfBirth);
+    if (updates.gender !== undefined) addField('gender', updates.gender);
+    if (updates.goal !== undefined) addField('goal', updates.goal);
+    if (updates.dailyCalories !== undefined) addField('daily_calories', updates.dailyCalories);
+    if (updates.dailyProtein !== undefined) addField('daily_protein', updates.dailyProtein);
+    if (updates.dailyCarbs !== undefined) addField('daily_carbs', updates.dailyCarbs);
+    if (updates.dailySugar !== undefined) addField('daily_sugar', updates.dailySugar);
+
+    if (fields.length === 0) {
+      return res.status(400).json({ error: 'No fields to update' });
+    }
+
+    fields.push(`updated_at = NOW()`);
+    values.push(id); // ID as last param
+
+    const query = `UPDATE users SET ${fields.join(', ')} WHERE id = $${paramCount} RETURNING *`;
+    const result = await pool.query(query, values);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // WEIGHT HISTORY
+    if (updates.weight) {
+      try {
+        await pool.query(
+          'INSERT INTO weight_history (user_id, weight) VALUES ($1, $2)',
+          [id, updates.weight]
+        );
+      } catch (err) {
+        console.error('[API] Failed to record weight history in PUT:', err.message);
+      }
+    }
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('[API] User PUT Error:', err);
     res.status(500).json({ error: 'Database error', details: err.message });
   }
 });

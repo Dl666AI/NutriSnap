@@ -61,9 +61,10 @@ app.all('/api/*', (req: Request, res: Response) => {
 });
 
 // 2. Serve Frontend (Production)
-// CRITICAL: We changed this from ../dist to ../public because Cloud Run mounts a volume at /app/dist
-// which hides our actual built files. We moved the build output to /app/public in Dockerfile.
-const DIST_PATH = path.join(__dirname, '../public');
+// CRITICAL: Cloud Run mounts volume at /app/public (copied from dist).
+// Local dev uses ../dist directly.
+const PUBLIC_PATH = path.join(__dirname, '../public');
+const DIST_PATH = fs.existsSync(PUBLIC_PATH) ? PUBLIC_PATH : path.join(__dirname, '../dist');
 console.log(`Serving static files from: ${DIST_PATH}`);
 
 // DEBUG: List files in dist to ensure build succeeded

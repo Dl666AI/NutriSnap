@@ -1,5 +1,6 @@
 import pool from '../config/db';
 import { DbUser } from '../src/shared/users_schema';
+import { DbWeightHistory } from '../src/shared/weight_history_schema';
 
 /**
  * REPOSITORY: Users
@@ -100,6 +101,12 @@ export class UserRepository {
         values.push(id); // Add ID as the last parameter
         const query = `UPDATE users SET ${fields.join(', ')} WHERE id = $${paramCount} RETURNING *`;
         const result = await pool.query(query, values);
+
+        // Track weight history if weight was updated
+        if (updates.weight) {
+            await this.addWeightHistory(id, Number(updates.weight));
+        }
+
         return result.rows[0] || null;
     }
 
@@ -158,6 +165,40 @@ export class UserRepository {
             user.daily_sugar,
         ];
         const result = await pool.query(query, values);
+
+        // Track weight history if weight is provided
+        if (user.weight) {
+            await this.addWeightHistory(user.id, Number(user.weight));
+        }
+
         return result.rows[0];
+    }
+
+    /**
+     * Add a weight history entry for a user.
+     * @param userId - The user's ID
+     * @param weight - The weight value
+     */
+    async addWeightHistory(userId: string, weight: number): Promise<void> {
+        try {
+            await pool.query(
+                'INSERT INTO weight_history (user_id, weight) VALUES ($1, $2)',
+                [userId, weight]
+            );
+        } catch (error) {
+            console.error("Failed to add weight history:", error);
+            // Non-critical: don't throw, just log
+        }
+    }
+
+    /**
+     * Get weight history for a user, ordered by date descending.
+     * @param userId - The user's ID
+     * @returns Array of DbWeightHistory
+     */
+    async getWeightHistory(userId: string): Promise<DbWeightHistory[]> {
+        const query = 'SELECT * FROM weight_history WHERE user_id = $1 ORDER BY date DESC LIMIT 20';
+        const result = await pool.query(query, [userId]);
+        return result.rows;
     }
 }

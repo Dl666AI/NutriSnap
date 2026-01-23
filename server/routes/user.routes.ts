@@ -13,6 +13,21 @@ const router = Router();
 const userService = new UserService();
 
 /**
+ * GET /api/users/:userId/weight-history
+ * Get weight history for a user
+ */
+router.get('/:userId/weight-history', async (req: Request, res: Response) => {
+    try {
+        const { userId } = req.params;
+        const history = await userService.getWeightHistory(userId);
+        res.json(history);
+    } catch (err: any) {
+        console.error('[GET /api/users/:userId/weight-history] Error:', err);
+        res.status(500).json({ error: 'Database error', details: err.message });
+    }
+});
+
+/**
  * GET /api/users/:id
  * Get a user by ID
  */

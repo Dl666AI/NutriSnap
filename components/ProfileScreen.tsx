@@ -370,6 +370,45 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({
     const toggleSettings = () => setIsSettingsOpen(!isSettingsOpen);
     const toggleEditProfile = () => setIsEditProfileOpen(!isEditProfileOpen);
 
+    // Weight Functionality
+    const [weightTrend, setWeightTrend] = useState<{ change: number, direction: 'up' | 'down' | 'flat' }>({ change: 0, direction: 'flat' });
+    const [weightHistory, setWeightHistory] = useState<{ date: string | Date; weight: number }[]>([]);
+
+    useEffect(() => {
+        if (!user?.id) return;
+
+        const fetchWeightHistory = async () => {
+            try {
+                const res = await fetch(`/api/users/${user.id}/weight-history`);
+                if (res.ok) {
+                    const history = await res.json();
+
+                    // Set full history for chart
+                    setWeightHistory(history);
+
+                    if (Array.isArray(history) && history.length >= 2) {
+                        // Latest is index 0, Previous is index 1 if sorted DESC
+                        const current = Number(history[0].weight);
+                        const previous = Number(history[1].weight);
+                        const diff = current - previous;
+
+                        setWeightTrend({
+                            change: Math.abs(diff),
+                            direction: diff > 0.1 ? 'up' : diff < -0.1 ? 'down' : 'flat'
+                        });
+                    } else {
+                        setWeightTrend({ change: 0, direction: 'flat' });
+                    }
+                }
+            } catch (err) {
+                console.error("Failed to fetch weight history", err);
+            }
+        };
+
+        fetchWeightHistory();
+    }, [user?.id, user?.weight]);
+
+
     // Helper: Parse JWT Token safely
     const parseJwt = (token: string) => {
         try {
@@ -726,23 +765,36 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({
                 <div className="grid grid-cols-2 gap-4">
                     <div
                         onClick={toggleEditProfile}
-                        className="bg-white dark:bg-surface-dark p-5 rounded-3xl shadow-card flex flex-col justify-between h-40 border border-neutral-100 dark:border-neutral-800 active:scale-[0.98] transition-transform cursor-pointer"
+                        className="bg-white dark:bg-surface-dark p-5 rounded-3xl shadow-card flex flex-col justify-between h-40 border border-neutral-100 dark:border-neutral-800 active:scale-[0.98] transition-transform cursor-pointer relative overflow-hidden"
                     >
-                        <div className="flex items-center gap-2 text-neutral-500 dark:text-neutral-400">
+                        <div className="flex items-center gap-2 text-neutral-500 dark:text-neutral-400 relative z-10">
                             <span className="material-symbols-outlined text-lg">monitor_weight</span>
                             <span className="text-sm font-medium">{t('weight')}</span>
                         </div>
-                        <div>
+                        <div className="relative z-10">
                             <div className="text-2xl font-extrabold text-neutral-900 dark:text-white">
                                 {user.weight ? user.weight : '--'} <span className="text-base font-semibold text-neutral-500">kg</span>
                             </div>
                             <div className="flex items-center gap-1 mt-1">
-                                {/* Placeholder trend data */}
-                                <span className="bg-primary/10 text-primary-dark text-xs font-bold px-2 py-0.5 rounded-full flex items-center gap-0.5">
-                                    <span className="material-symbols-outlined text-xs">trending_flat</span> 0.0kg
-                                </span>
+                                {weightTrend.direction === 'up' && (
+                                    <span className="bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-xs font-bold px-2 py-0.5 rounded-full flex items-center gap-0.5">
+                                        <span className="material-symbols-outlined text-xs">trending_up</span> +{weightTrend.change.toFixed(1)}kg
+                                    </span>
+                                )}
+                                {weightTrend.direction === 'down' && (
+                                    <span className="bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 text-xs font-bold px-2 py-0.5 rounded-full flex items-center gap-0.5">
+                                        <span className="material-symbols-outlined text-xs">trending_down</span> -{weightTrend.change.toFixed(1)}kg
+                                    </span>
+                                )}
+                                {weightTrend.direction === 'flat' && (
+                                    <span className="bg-neutral-100 dark:bg-neutral-800 text-neutral-500 text-xs font-bold px-2 py-0.5 rounded-full flex items-center gap-0.5">
+                                        <span className="material-symbols-outlined text-xs">trending_flat</span> Stable
+                                    </span>
+                                )}
                             </div>
                         </div>
+
+
                     </div>
 
                     <div
@@ -809,11 +861,11 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({
                             </div>
                         </div>
                     </div>
-                </div>
-            </section>
+                </div >
+            </section >
 
             {/* Consistency Calendar Section */}
-            <section className="px-6 py-2 animate-enter" style={{ animationDelay: '0.2s' }}>
+            < section className="px-6 py-2 animate-enter" style={{ animationDelay: '0.2s' }}>
                 <div className="flex items-center justify-between mb-4">
                     <h2 className="text-neutral-900 dark:text-white text-lg font-bold">{t('consistency')}</h2>
                 </div>
@@ -895,28 +947,32 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({
                         </div>
                     </div>
                 </div>
-            </section>
+            </section >
 
             {/* Settings Modal */}
-            {isSettingsOpen && (
-                <SettingsSheet
-                    theme={theme}
-                    setTheme={setTheme}
-                    language={language}
-                    setLanguage={setLanguage}
-                    onClose={toggleSettings}
-                    onLogout={onLogout}
-                    isLoggedIn={true}
-                />
-            )}
+            {
+                isSettingsOpen && (
+                    <SettingsSheet
+                        theme={theme}
+                        setTheme={setTheme}
+                        language={language}
+                        setLanguage={setLanguage}
+                        onClose={toggleSettings}
+                        onLogout={onLogout}
+                        isLoggedIn={true}
+                    />
+                )
+            }
 
             {/* Edit Profile Modal */}
-            {isEditProfileOpen && (
-                <EditProfileModal user={user} onClose={toggleEditProfile} onSave={onUpdateUser} />
-            )}
+            {
+                isEditProfileOpen && (
+                    <EditProfileModal user={user} onClose={toggleEditProfile} onSave={onUpdateUser} />
+                )
+            }
 
             <BottomNav currentScreen="PROFILE" onNavigate={onNavigate} onCameraClick={onFabClick} />
-        </div>
+        </div >
     );
 };
 
