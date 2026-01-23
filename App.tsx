@@ -215,6 +215,57 @@ const App: React.FC = () => {
     return null;
   });
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // CRITICAL FIX: Refresh user data from DB on app load
+  // Problem: localStorage may have stale data (missing profile stats)
+  // Solution: Fetch fresh data from DB and update localStorage on mount
+  // ═══════════════════════════════════════════════════════════════════════════
+  useEffect(() => {
+    const refreshUserFromDB = async () => {
+      // Only refresh if we have a user ID from localStorage
+      if (!user?.id) return;
+
+      console.log('[App] STARTUP: Refreshing user data from DB for:', user.id);
+
+      try {
+        const dbUser = await UserService.getUser(user.id);
+
+        if (dbUser) {
+          console.log('[App] STARTUP: Got fresh user from DB:', JSON.stringify(dbUser, null, 2));
+
+          // Merge: Keep localStorage values only if DB values are missing
+          // This ensures DB is the source of truth
+          const refreshedUser: User = {
+            ...user,  // Start with localStorage data
+            ...dbUser, // Override with DB data (DB is source of truth)
+          };
+
+          // Only update if there's a meaningful difference
+          const dbHasMoreData =
+            (dbUser.weight && !user.weight) ||
+            (dbUser.height && !user.height) ||
+            (dbUser.dailyCalories && !user.dailyCalories) ||
+            (dbUser.goal && !user.goal);
+
+          if (dbHasMoreData) {
+            console.log('[App] STARTUP: DB has more data, updating local state');
+            setUser(refreshedUser);
+            localStorage.setItem('nutrisnap_user', JSON.stringify(refreshedUser));
+          } else {
+            console.log('[App] STARTUP: localStorage already up-to-date');
+          }
+        } else {
+          console.log('[App] STARTUP: User not found in DB (new user)');
+        }
+      } catch (error) {
+        console.warn('[App] STARTUP: Failed to refresh user from DB:', error);
+        // Don't crash - keep using localStorage data
+      }
+    };
+
+    refreshUserFromDB();
+  }, []); // Run once on mount
+
   const handleLogin = async (newUser: User) => {
     console.log('=== [App] LOGIN STARTED ===');
     console.log('[App] 1. New User from Login:', JSON.stringify(newUser, null, 2));

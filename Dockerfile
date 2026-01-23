@@ -16,18 +16,28 @@ COPY types.ts ./
 
 RUN npm run build
 
-# Production stage - run server
+# Production stage - run server (TypeScript)
 FROM node:20-alpine
 
 WORKDIR /app
 
 # Copy server files
-COPY server/package.json ./server/
+COPY server/package.json server/tsconfig.json ./server/
 WORKDIR /app/server
-RUN npm install --production
 
-# Copy server source
+# Install ALL dependencies (including devDependencies for tsx)
+RUN npm install
+
+# Copy server source (TypeScript files + JavaScript files for compatibility)
+COPY server/*.ts ./
 COPY server/*.js ./
+
+# Copy TypeScript subdirectories
+COPY server/src/ ./src/
+COPY server/routes/ ./routes/
+COPY server/services/ ./services/
+COPY server/repositories/ ./repositories/
+COPY server/config/ ./config/
 
 # Copy built frontend from builder stage
 COPY --from=frontend-builder /app/dist /app/dist
@@ -38,4 +48,5 @@ ENV PORT=8080
 
 EXPOSE 8080
 
-CMD ["node", "index.js"]
+# Run TypeScript server with tsx
+CMD ["npx", "tsx", "server.ts"]
