@@ -20,6 +20,7 @@ if (!process.env.DB_HOST && process.env.NODE_ENV !== 'production') {
 // Import routes (NEW: Using refactored route layer)
 import userRoutes from './routes/user.routes';
 import mealRoutes from './routes/meal.routes';
+import aiRoutes from './routes/ai.routes';
 
 export const app = express();
 const PORT = Number(process.env.PORT) || 3000;
@@ -52,6 +53,7 @@ app.get('/api/health', async (req: Request, res: Response) => {
 // --- API Routes (NEW: Using refactored route layer) ---
 app.use('/api/users', userRoutes);
 app.use('/api/meals', mealRoutes);
+app.use('/api/analyze', aiRoutes);
 
 // --- 404 & Static Fallback ---
 
