@@ -38,6 +38,7 @@ COPY server/routes/ ./routes/
 COPY server/services/ ./services/
 COPY server/repositories/ ./repositories/
 COPY server/config/ ./config/
+COPY server/certs/ /app/certs/
 
 # Copy built frontend from builder stage
 COPY --from=frontend-builder /app/dist /app/dist
