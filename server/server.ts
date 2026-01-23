@@ -64,6 +64,32 @@ app.all('/api/*', (req: Request, res: Response) => {
 const DIST_PATH = path.join(__dirname, '../dist');
 console.log(`Serving static files from: ${DIST_PATH}`);
 
+// DEBUG: List files in dist to ensure build succeeded
+try {
+    if (fs.existsSync(DIST_PATH)) {
+        const files = fs.readdirSync(DIST_PATH);
+        console.log(`[DEBUG] Contents of ${DIST_PATH}:`, files);
+
+        const indexHtmlPath = path.join(DIST_PATH, 'index.html');
+        if (fs.existsSync(indexHtmlPath)) {
+            const content = fs.readFileSync(indexHtmlPath, 'utf-8');
+            console.log(`[DEBUG] index.html first 500 chars:`, content.substring(0, 500));
+
+            if (content.includes('src="index.tsx"')) {
+                console.error("🚨 CRITICAL: index.html references index.tsx! This is the SOURCE file, not the BUILD file.");
+            } else {
+                console.log("✅ index.html looks like a production build (no index.tsx ref).");
+            }
+        } else {
+            console.error(`🚨 CRITICAL: index.html missing in ${DIST_PATH}`);
+        }
+    } else {
+        console.error(`🚨 CRITICAL: DIST_PATH does not exist: ${DIST_PATH}`);
+    }
+} catch (e) {
+    console.error("[DEBUG] Error inspecting dist folder:", e);
+}
+
 if (fs.existsSync(DIST_PATH)) {
     // Serve static assets with caching (1yr)
     app.use(express.static(DIST_PATH, {

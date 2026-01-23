@@ -43,6 +43,9 @@ COPY server/config/ ./config/
 # Copy built frontend from builder stage
 COPY --from=frontend-builder /app/dist /app/dist
 
+# DEBUG: Verify dist exists and has content
+RUN ls -la /app/dist && ls -la /app/dist/assets || echo "Dist missing!"
+
 # Cloud Run sets PORT env var
 ENV NODE_ENV=production
 ENV PORT=8080
