@@ -24,7 +24,9 @@ const poolConfig: PoolConfig = {
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
     database: process.env.DB_NAME,
-    host: process.env.DB_HOST,
+    host: process.env.INSTANCE_CONNECTION_NAME
+        ? `/cloudsql/${process.env.INSTANCE_CONNECTION_NAME}`
+        : process.env.DB_HOST,
     port: Number(process.env.DB_PORT) || 5432,
 
     // Pooling settings
@@ -32,18 +34,21 @@ const poolConfig: PoolConfig = {
     idleTimeoutMillis: 30000, // How long a client is allowed to remain idle before being closed
     connectionTimeoutMillis: 2000, // How long to wait for a connection
 
-    // SSL Configuration for GCP Cloud SQL
-    // Required if your GCP instance has "Allow only SSL connections" enabled.
-    ssl: isProduction ? (
-        fs.existsSync(path.join(__dirname, '../../certs/server-ca.pem')) ? {
-            rejectUnauthorized: true,
-            ca: fs.readFileSync(path.join(__dirname, '../../certs/server-ca.pem')).toString(),
-            key: fs.readFileSync(path.join(__dirname, '../../certs/client-key.pem')).toString(),
-            cert: fs.readFileSync(path.join(__dirname, '../../certs/client-cert.pem')).toString(),
-        } : {
-            rejectUnauthorized: false
-        }
-    ) : false,
+    // SSL Configuration
+    // - If using Unix Socket (Cloud Run default), disable SSL (Proxy handles it).
+    // - If using TCP (local dev or public IP), use SSL if enabled/certs exist.
+    ssl: process.env.INSTANCE_CONNECTION_NAME ? false : (
+        isProduction ? (
+            fs.existsSync(path.join(__dirname, '../../certs/server-ca.pem')) ? {
+                rejectUnauthorized: true,
+                ca: fs.readFileSync(path.join(__dirname, '../../certs/server-ca.pem')).toString(),
+                key: fs.readFileSync(path.join(__dirname, '../../certs/client-key.pem')).toString(),
+                cert: fs.readFileSync(path.join(__dirname, '../../certs/client-cert.pem')).toString(),
+            } : {
+                rejectUnauthorized: false
+            }
+        ) : false
+    ),
 };
 
 const pool = new Pool(poolConfig);
