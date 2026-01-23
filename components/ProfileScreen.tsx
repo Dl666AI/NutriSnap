@@ -37,40 +37,7 @@ const calculateAge = (dob?: string): number => {
 const SettingsSheet = ({ theme, setTheme, language, setLanguage, onClose, onLogout, isLoggedIn }: any) => {
     const { t } = useLanguage();
 
-    // DB Debug State
-    const [dbStatus, setDbStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
-    const [dbMessage, setDbMessage] = useState('');
 
-    const testConnection = async () => {
-        setDbStatus('loading');
-        setDbMessage('Attempting to connect...');
-        try {
-            const res = await fetch('/api/debug/connection');
-
-            // Check content type to see if we got JSON or HTML (404 fallback)
-            const contentType = res.headers.get("content-type");
-
-            if (contentType && contentType.indexOf("application/json") !== -1) {
-                const data = await res.json();
-                if (res.ok) {
-                    setDbStatus('success');
-                    setDbMessage(`Success! Connected to ${data.config_used.host} (v${data.server_ip})`);
-                } else {
-                    setDbStatus('error');
-                    const detail = data.detail !== 'No details' ? ` - ${data.detail}` : '';
-                    setDbMessage(`Error ${data.code}: ${data.message}${detail}`);
-                }
-            } else {
-                // If we got text/html, it means the Proxy failed to connect to the backend 
-                // and Vite served index.html instead, OR in production the api route is crashing
-                setDbStatus('error');
-                setDbMessage(`Backend Offline. (Local: run 'node server/index.js'. Prod: Check logs)`);
-            }
-        } catch (e: any) {
-            setDbStatus('error');
-            setDbMessage(`Network Error: ${e.message || 'Connection Refused'}. Is the server running?`);
-        }
-    };
 
     return (
         <div className="fixed inset-0 z-[100] flex flex-col justify-end font-display">
@@ -125,47 +92,7 @@ const SettingsSheet = ({ theme, setTheme, language, setLanguage, onClose, onLogo
                         </div>
                     </div>
 
-                    {/* Database Debug Tool */}
-                    <div className="p-4 bg-white dark:bg-neutral-800 rounded-2xl border border-neutral-100 dark:border-neutral-700">
-                        <div className="flex items-center gap-3 mb-3">
-                            <div className="size-10 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center">
-                                <span className="material-symbols-outlined">dns</span>
-                            </div>
-                            <div className="flex flex-col">
-                                <span className="font-bold text-neutral-800 dark:text-white">System Diagnostics</span>
-                                <span className="text-xs text-neutral-500">Check connection to cloud database</span>
-                            </div>
-                        </div>
 
-                        <div className="bg-neutral-50 dark:bg-neutral-900 rounded-xl p-3 mb-3">
-                            {dbStatus === 'idle' && <p className="text-xs text-neutral-500">Ready to test connection.</p>}
-                            {dbStatus === 'loading' && (
-                                <div className="flex items-center gap-2">
-                                    <div className="size-3 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
-                                    <p className="text-xs text-neutral-500">Connecting...</p>
-                                </div>
-                            )}
-                            {dbStatus === 'success' && (
-                                <p className="text-xs text-green-600 dark:text-green-400 font-medium flex items-center gap-1">
-                                    <span className="material-symbols-outlined text-sm">check_circle</span>
-                                    {dbMessage}
-                                </p>
-                            )}
-                            {dbStatus === 'error' && (
-                                <p className="text-xs text-red-600 dark:text-red-400 font-medium break-all">
-                                    {dbMessage}
-                                </p>
-                            )}
-                        </div>
-
-                        <button
-                            onClick={testConnection}
-                            disabled={dbStatus === 'loading'}
-                            className="w-full py-2 bg-neutral-200 dark:bg-neutral-700 hover:bg-neutral-300 dark:hover:bg-neutral-600 text-neutral-700 dark:text-neutral-200 rounded-lg text-xs font-bold transition-colors"
-                        >
-                            Test Database Connection
-                        </button>
-                    </div>
 
                     {isLoggedIn && (
                         <button
