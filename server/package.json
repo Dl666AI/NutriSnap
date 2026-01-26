@@ -3,8 +3,8 @@
   "version": "1.0.1",
   "type": "module",
   "scripts": {
-    "start": "node index.js",
-    "dev": "node --watch index.js",
+    "start": "node dist/server.js",
+    "dev": "tsx watch server.ts",
     "dev:ts": "tsx watch server.ts",
     "build": "tsc",
     "start:ts": "node dist/server.js",
